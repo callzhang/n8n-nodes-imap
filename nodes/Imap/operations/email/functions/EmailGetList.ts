@@ -243,14 +243,31 @@ export const getEmailsListOperation: IResourceOperationDef = {
     // process the emails
     for (const email of emailsList) {
       context.logger?.info(`  ${email.uid}`);
-      var item_json = JSON.parse(JSON.stringify(email));
+      var item_json: any = {};
 
-      // add mailbox path to the item
+      // Always include basic email info
+      item_json.seq = email.seq;
+      item_json.uid = email.uid;
       item_json.mailboxPath = mailboxPath;
 
-      // add enhanced email fields if requested
+      // Include envelope data
+      if (email.envelope) {
+        item_json.envelope = email.envelope;
+      }
+
+      // Include flags/labels
+      if (email.flags) {
+        item_json.labels = email.flags;
+      }
+
+      // Include size
+      if (email.size) {
+        item_json.size = email.size;
+      }
+
+      // add enhanced email fields if requested (clean, non-redundant format)
       if (enhancedFields) {
-        // Extract structured fields from envelope
+        // Extract structured fields from envelope (clean format)
         if (email.envelope) {
           item_json.title = email.envelope.subject || '';
           item_json.from = formatEmailAddresses(email.envelope.from || []);
@@ -261,17 +278,6 @@ export const getEmailsListOperation: IResourceOperationDef = {
           item_json.date = email.envelope.date;
           item_json.messageId = email.envelope.messageId;
           item_json.inReplyTo = email.envelope.inReplyTo;
-          // item_json.references = email.envelope.references; // references property not available in envelope
-        }
-
-        // Extract labels/flags
-        if (email.flags) {
-          item_json.labels = email.flags;
-        }
-
-        // Add size information
-        if (email.size) {
-          item_json.size = email.size;
         }
       }
 
@@ -293,7 +299,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
       }
 
 
-      const analyzeBodyStructure = includeAttachmentsInfo || includeTextContent || includeHtmlContent;
+      const analyzeBodyStructure = includeAttachmentsInfo || includeTextContent || includeHtmlContent || enhancedFields;
 
       var textPartId = null;
       var htmlPartId = null;
@@ -338,8 +344,8 @@ export const getEmailsListOperation: IResourceOperationDef = {
       }
 
       // fetch text and html content
-      if (includeTextContent || includeHtmlContent) {
-        if (includeTextContent) {
+      if (includeTextContent || includeHtmlContent || enhancedFields) {
+        if (includeTextContent || enhancedFields) {
           // always set textContent to null, in case there is no text part
           item_json.textContent = null;
           if (textPartId) {
@@ -357,7 +363,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
             }
           }
         }
-        if (includeHtmlContent) {
+        if (includeHtmlContent || enhancedFields) {
           // always set htmlContent to null, in case there is no html part
           item_json.htmlContent = null;
           if (htmlPartId) {

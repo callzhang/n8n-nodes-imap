@@ -1,3 +1,12 @@
+## [2.11.6](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.5...v2.11.6) (2025-01-XX)
+
+### Bug Fixes
+
+* **Email Content Extraction**: Fixed "Get Many" operation to properly extract email body content (text and HTML) when enhanced fields are enabled
+* **Labels/Flags**: Fixed missing labels/flags in email results
+* **Redundant Fields**: Cleaned up redundant enhanced fields that duplicated envelope data
+* **Content Processing**: Enhanced fields now always fetch and include email content
+
 ## [2.11.5](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.4...v2.11.5) (2025-01-XX)
 
 ### Documentation
