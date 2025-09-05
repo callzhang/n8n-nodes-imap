@@ -1,3 +1,9 @@
+## [2.11.5](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.4...v2.11.5) (2025-01-XX)
+
+### Documentation
+
+* **README Update**: Force npm to update README with new enhanced icon
+
 ## [2.11.4](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.3...v2.11.4) (2025-01-XX)
 
 ### Features
