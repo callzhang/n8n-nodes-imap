@@ -1,3 +1,19 @@
+## [2.11.7](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.6...v2.11.7) (2025-01-XX)
+
+### Features
+
+* **HTML Simplification**: Added comprehensive HTML to readable text conversion function
+* **Enhanced Content Processing**: Now provides three content formats - text, HTML, and readable
+* **Improved User Experience**: "Include Body" parameter with clear tooltip explaining text and HTML output
+* **Standard Fields**: Flags/labels and structured fields now always included in output
+
+### Improvements
+
+* **Content Readability**: HTML content converted to clean, readable format with proper formatting
+* **Link Handling**: Links converted to readable format (Link Text (URL))
+* **Format Preservation**: Maintains emphasis, lists, headers, and other formatting in readable text
+* **Parameter Clarity**: Renamed "Enhanced Email Fields" to "Include Body" for better understanding
+
 ## [2.11.6](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.5...v2.11.6) (2025-01-XX)
 
 ### Bug Fixes

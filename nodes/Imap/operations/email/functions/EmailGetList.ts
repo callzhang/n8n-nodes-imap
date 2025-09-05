@@ -60,6 +60,62 @@ function formatEmailAddresses(addresses: any[]): string[] {
   }).filter(addr => addr);
 }
 
+function simplifyHtmlToReadable(html: string): string {
+  if (!html) return '';
+
+  // Remove script and style elements completely
+  let simplified = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  simplified = simplified.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+  // Convert common HTML elements to readable format
+  simplified = simplified
+    // Convert headers to readable format
+    .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n$1\n' + '='.repeat(50) + '\n')
+    // Convert paragraphs
+    .replace(/<p[^>]*>(.*?)<\/p>/gi, '\n\n$1\n')
+    // Convert line breaks
+    .replace(/<br[^>]*>/gi, '\n')
+    // Convert divs to line breaks
+    .replace(/<div[^>]*>(.*?)<\/div>/gi, '\n$1\n')
+    // Convert lists
+    .replace(/<ul[^>]*>(.*?)<\/ul>/gi, '\n$1\n')
+    .replace(/<ol[^>]*>(.*?)<\/ol>/gi, '\n$1\n')
+    .replace(/<li[^>]*>(.*?)<\/li>/gi, '• $1\n')
+    // Convert blockquotes
+    .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '\n> $1\n')
+    // Convert links to readable format
+    .replace(/<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/gi, '$2 ($1)')
+    // Convert emphasis
+    .replace(/<(strong|b)[^>]*>(.*?)<\/(strong|b)>/gi, '**$2**')
+    .replace(/<(em|i)[^>]*>(.*?)<\/(em|i)>/gi, '*$2*')
+    // Convert code
+    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+    .replace(/<pre[^>]*>(.*?)<\/pre>/gi, '\n```\n$1\n```\n')
+    // Convert tables to readable format
+    .replace(/<table[^>]*>(.*?)<\/table>/gi, '\n$1\n')
+    .replace(/<tr[^>]*>(.*?)<\/tr>/gi, '\n$1\n')
+    .replace(/<td[^>]*>(.*?)<\/td>/gi, '$1 | ')
+    .replace(/<th[^>]*>(.*?)<\/th>/gi, '$1 | ')
+    // Remove all remaining HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Decode HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    // Clean up whitespace
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Multiple line breaks to double
+    .replace(/^\s+|\s+$/g, '') // Trim start and end
+    .replace(/[ \t]+/g, ' ') // Multiple spaces to single space
+    .replace(/\n /g, '\n') // Remove leading spaces from lines
+    .replace(/ \n/g, '\n'); // Remove trailing spaces from lines
+
+  return simplified.trim();
+}
+
 
 export const getEmailsListOperation: IResourceOperationDef = {
   operation: {
@@ -154,11 +210,12 @@ export const getEmailsListOperation: IResourceOperationDef = {
       placeholder: '100',
     },
     {
-      displayName: 'Enhanced Email Fields',
+      displayName: 'Include Body',
       name: 'enhancedFields',
       type: 'boolean',
       default: true,
-      description: 'Whether to return structured email fields (title, from, to, cc, bcc, labels, content)',
+      description: 'Whether to include email body content (text and HTML) in the results',
+      hint: 'Returns both text and HTML versions of the email body content',
     }
   ],
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
@@ -250,35 +307,32 @@ export const getEmailsListOperation: IResourceOperationDef = {
       item_json.uid = email.uid;
       item_json.mailboxPath = mailboxPath;
 
-      // Include envelope data
+      // Always include envelope data
       if (email.envelope) {
         item_json.envelope = email.envelope;
       }
 
-      // Include flags/labels
+      // Always include flags/labels as standard part
       if (email.flags) {
         item_json.labels = email.flags;
       }
 
-      // Include size
+      // Always include size
       if (email.size) {
         item_json.size = email.size;
       }
 
-      // add enhanced email fields if requested (clean, non-redundant format)
-      if (enhancedFields) {
-        // Extract structured fields from envelope (clean format)
-        if (email.envelope) {
-          item_json.title = email.envelope.subject || '';
-          item_json.from = formatEmailAddresses(email.envelope.from || []);
-          item_json.to = formatEmailAddresses(email.envelope.to || []);
-          item_json.cc = formatEmailAddresses(email.envelope.cc || []);
-          item_json.bcc = formatEmailAddresses(email.envelope.bcc || []);
-          item_json.replyTo = formatEmailAddresses(email.envelope.replyTo || []);
-          item_json.date = email.envelope.date;
-          item_json.messageId = email.envelope.messageId;
-          item_json.inReplyTo = email.envelope.inReplyTo;
-        }
+      // Always include structured fields from envelope (clean format)
+      if (email.envelope) {
+        item_json.title = email.envelope.subject || '';
+        item_json.from = formatEmailAddresses(email.envelope.from || []);
+        item_json.to = formatEmailAddresses(email.envelope.to || []);
+        item_json.cc = formatEmailAddresses(email.envelope.cc || []);
+        item_json.bcc = formatEmailAddresses(email.envelope.bcc || []);
+        item_json.replyTo = formatEmailAddresses(email.envelope.replyTo || []);
+        item_json.date = email.envelope.date;
+        item_json.messageId = email.envelope.messageId;
+        item_json.inReplyTo = email.envelope.inReplyTo;
       }
 
       // process the headers
@@ -355,10 +409,11 @@ export const getEmailsListOperation: IResourceOperationDef = {
             if (textContent.content) {
               item_json.textContent = await streamToString(textContent.content);
 
-              // if enhanced fields are enabled, also provide simplified HTML version
+              // if include body is enabled, also provide simplified HTML version
               if (enhancedFields) {
                 item_json.contentText = item_json.textContent;
                 item_json.contentHtml = textToSimplifiedHtml(item_json.textContent);
+                item_json.contentReadable = item_json.textContent; // Text content is already readable
               }
             }
           }
@@ -373,23 +428,25 @@ export const getEmailsListOperation: IResourceOperationDef = {
             if (htmlContent.content) {
               item_json.htmlContent = await streamToString(htmlContent.content);
 
-              // if enhanced fields are enabled, also provide the HTML content
+              // if include body is enabled, also provide the HTML content
               if (enhancedFields) {
                 item_json.contentHtml = item_json.htmlContent;
-                // if we don't have text content, create simplified HTML from the HTML content
+                // if we don't have text content, create readable text from the HTML content
                 if (!item_json.contentText) {
-                  // Strip HTML tags for text version
-                  item_json.contentText = item_json.htmlContent.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+                  item_json.contentText = simplifyHtmlToReadable(item_json.htmlContent);
                 }
+                // Always provide a readable version of the HTML content
+                item_json.contentReadable = simplifyHtmlToReadable(item_json.htmlContent);
               }
             }
           }
         }
 
-        // if enhanced fields are enabled but no content was found, set empty values
+        // if include body is enabled but no content was found, set empty values
         if (enhancedFields && !item_json.contentText && !item_json.contentHtml) {
           item_json.contentText = '';
           item_json.contentHtml = '';
+          item_json.contentReadable = '';
         }
       }
 
