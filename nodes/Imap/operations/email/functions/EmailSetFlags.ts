@@ -3,6 +3,7 @@ import { IDataObject, IExecuteFunctions, INodeExecutionData } from "n8n-workflow
 import { IResourceOperationDef } from "../../../utils/CommonDefinitions";
 import { getMailboxPathFromNodeParameter, parameterSelectMailbox } from '../../../utils/SearchFieldParameters';
 import { ImapFlowErrorCatcher, NodeImapError } from "../../../utils/ImapUtils";
+import { ParameterValidator } from "../../../utils/ParameterValidator";
 
 
 enum ImapFlags {
@@ -138,6 +139,9 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
     const flags = context.getNodeParameter('flags', itemIndex) as unknown as { [key: string]: boolean };
     const customLabels = context.getNodeParameter('customLabels', itemIndex) as { label: Array<{ name: string; value: string; action: string }> };
 
+    // Validate parameters
+    ParameterValidator.validateUids(emailUid);
+
     var flagsToSet : string[] = [];
     var flagsToRemove : string[] = [];
     for (const flagName in flags) {
@@ -170,7 +174,11 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
 
     context.logger?.info(`Setting flags "${flagsToSet.join(',')}" and removing flags "${flagsToRemove.join(',')}" on email "${emailUid}"`);
 
-    await client.mailboxOpen(mailboxPath, { readOnly: false });
+    try {
+      await client.mailboxOpen(mailboxPath, { readOnly: false });
+    } catch (error) {
+      throw new Error(`Failed to open mailbox ${mailboxPath}: ${(error as Error).message}`);
+    }
 
     if (flagsToSet.length > 0) {
       ImapFlowErrorCatcher.getInstance().startErrorCatching();

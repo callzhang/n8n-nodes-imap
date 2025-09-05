@@ -1,3 +1,18 @@
+## [2.12.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.10...v2.12.0) (2025-01-XX)
+
+### New Features
+
+* **Single Email Operation**: Added dedicated "Get Single Email" operation optimized for fetching individual emails with full content
+* **Parameter Validation**: Implemented consistent parameter validation using ParameterValidator utility class
+* **Enhanced Error Handling**: Improved error messages and validation across all operations
+
+### Improvements
+
+* **Performance Optimization**: Single email operation uses `source: true` for better content extraction
+* **Better Type Safety**: Added proper TypeScript interfaces and validation
+* **Cleaner Code Structure**: Separated concerns with dedicated utility classes
+* **Consistent Validation**: Standardized parameter validation across all operations
+
 ## [2.11.10](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.9...v2.11.10) (2025-01-XX)
 
 ### Bug Fixes

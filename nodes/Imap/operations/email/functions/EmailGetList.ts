@@ -322,7 +322,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
           if (rawMessage.content) {
             const rawContent = await streamToString(rawMessage.content);
             const parsed = await simpleParser(rawContent);
-            
+
             // Create envelope-like structure from parsed data
             item_json.envelope = {
               subject: parsed.subject || '',
@@ -335,13 +335,13 @@ export const getEmailsListOperation: IResourceOperationDef = {
               messageId: parsed.messageId || '',
               inReplyTo: parsed.inReplyTo || ''
             };
-            
+
             // Set flags to empty array if not available
             item_json.labels = [];
-            
+
             // Set size from parsed data
             item_json.size = rawContent.length;
-            
+
             context.logger?.debug(`Raw message parsing successful for email ${email.uid}`);
           }
         } catch (error) {
@@ -481,14 +481,14 @@ export const getEmailsListOperation: IResourceOperationDef = {
           if (rawMessage.content) {
             const rawContent = await streamToString(rawMessage.content);
             const parsed = await simpleParser(rawContent);
-            
+
             // Extract content from parsed data
             if (parsed.text) {
               item_json.text = parsed.text;
               item_json.markdown = parsed.text; // Plain text is already readable
               item_json.html = textToSimplifiedHtml(parsed.text);
             }
-            
+
             if (parsed.html) {
               item_json.html = parsed.html;
               item_json.markdown = htmlToMarkdown(parsed.html);
@@ -497,14 +497,14 @@ export const getEmailsListOperation: IResourceOperationDef = {
                 item_json.text = htmlToText(parsed.html);
               }
             }
-            
+
             // If still no content, set empty values
             if (!item_json.text && !item_json.html) {
               item_json.text = '';
               item_json.markdown = '';
               item_json.html = '';
             }
-            
+
             context.logger?.debug(`Raw message body parsing successful for email ${email.uid}`);
           }
         } catch (error) {
