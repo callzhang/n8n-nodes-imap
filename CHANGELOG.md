@@ -1,3 +1,9 @@
+## [2.11.4](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.3...v2.11.4) (2025-01-XX)
+
+### Features
+
+* **Updated Icon**: Redesigned icon to match user-generated design with open envelope and prominent plus sign
+
 ## [2.11.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.2...v2.11.3) (2025-01-XX)
 
 ### Features
