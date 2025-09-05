@@ -1,3 +1,11 @@
+## [2.11.9](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.8...v2.11.9) (2025-01-XX)
+
+### Bug Fixes
+
+* **Body Content Extraction**: Fixed issue where email body content was returning null when "Include Body" is enabled
+* **Body Structure Fetching**: Ensure bodyStructure is always fetched when enhanced fields are enabled
+* **Debug Logging**: Added comprehensive debug logging to help troubleshoot content extraction issues
+
 ## [2.11.8](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.7...v2.11.8) (2025-01-XX)
 
 ### Improvements

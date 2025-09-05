@@ -262,6 +262,14 @@ export const getEmailsListOperation: IResourceOperationDef = {
     context.logger?.debug(`Search object: ${JSON.stringify(searchObject)}`);
     context.logger?.debug(`Fetch query: ${JSON.stringify(fetchQuery)}`);
 
+    // get enhanced fields parameter
+    const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
+    
+    // if enhanced fields are enabled, we need bodyStructure to extract content
+    if (enhancedFields) {
+      fetchQuery.bodyStructure = true;
+    }
+
     // get limit parameter
     const limit = context.getNodeParameter('limit', itemIndex) as number;
 
@@ -280,9 +288,6 @@ export const getEmailsListOperation: IResourceOperationDef = {
       }
     }
     context.logger?.info(`Found ${emailsList.length} emails`);
-
-    // get enhanced fields parameter
-    const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
 
     // process the emails
     for (const email of emailsList) {
@@ -334,6 +339,8 @@ export const getEmailsListOperation: IResourceOperationDef = {
       var textPartId = null;
       var htmlPartId = null;
       var attachmentsInfo = [];
+      
+      context.logger?.debug(`Analyzing body structure for email ${email.uid}: ${analyzeBodyStructure}`);
 
 
       if (analyzeBodyStructure) {
@@ -341,8 +348,10 @@ export const getEmailsListOperation: IResourceOperationDef = {
         const bodyStructure = email.bodyStructure as unknown as any;
 
         if (bodyStructure) {
+          context.logger?.debug(`Body structure found for email ${email.uid}: ${JSON.stringify(bodyStructure)}`);
 
           const partsInfo = getEmailPartsInfoRecursive(context, bodyStructure);
+          context.logger?.debug(`Parts info for email ${email.uid}: ${JSON.stringify(partsInfo)}`);
 
           // filter attachments and text/html parts
           for (const partInfo of partsInfo) {
@@ -360,12 +369,16 @@ export const getEmailsListOperation: IResourceOperationDef = {
               // in that case, ImapFlow uses "TEXT" as partId to download the only part
               if (partInfo.type === 'text/plain') {
                 textPartId = partInfo.partId || "TEXT";
+                context.logger?.debug(`Found text part for email ${email.uid}: ${textPartId}`);
               }
               if (partInfo.type === 'text/html') {
                 htmlPartId = partInfo.partId || "TEXT";
+                context.logger?.debug(`Found HTML part for email ${email.uid}: ${htmlPartId}`);
               }
             }
           }
+        } else {
+          context.logger?.warn(`No body structure found for email ${email.uid}`);
         }
       }
 
