@@ -1,3 +1,12 @@
+## [2.11.10](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.9...v2.11.10) (2025-01-XX)
+
+### Bug Fixes
+
+* **Raw Message Fallback**: Added fallback mechanism for servers that don't return structured IMAP data
+* **Body Content Extraction**: Fixed issue where body content was null when IMAP server doesn't provide bodyStructure
+* **Envelope Data Fallback**: Added raw message parsing to extract envelope data when IMAP envelope is missing
+* **Server Compatibility**: Improved compatibility with IMAP servers that have limited structured data support
+
 ## [2.11.9](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.8...v2.11.9) (2025-01-XX)
 
 ### Bug Fixes

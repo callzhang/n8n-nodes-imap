@@ -264,7 +264,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
     // get enhanced fields parameter
     const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
-    
+
     // if enhanced fields are enabled, we need bodyStructure to extract content
     if (enhancedFields) {
       fetchQuery.bodyStructure = true;
@@ -314,6 +314,41 @@ export const getEmailsListOperation: IResourceOperationDef = {
         item_json.size = email.size;
       }
 
+      // Fallback: If structured data is missing, try to parse raw message
+      if (!email.envelope && !email.flags && enhancedFields) {
+        context.logger?.debug(`Structured data missing for email ${email.uid}, trying raw message parsing...`);
+        try {
+          const rawMessage = await client.download(email.uid.toString(), 'TEXT', { uid: true });
+          if (rawMessage.content) {
+            const rawContent = await streamToString(rawMessage.content);
+            const parsed = await simpleParser(rawContent);
+            
+            // Create envelope-like structure from parsed data
+            item_json.envelope = {
+              subject: parsed.subject || '',
+              from: parsed.from ? [{ address: (parsed.from as any).value?.[0]?.address || '', name: (parsed.from as any).value?.[0]?.name || '' }] : [],
+              to: parsed.to ? (parsed.to as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
+              cc: parsed.cc ? (parsed.cc as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
+              bcc: parsed.bcc ? (parsed.bcc as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
+              replyTo: parsed.replyTo ? (parsed.replyTo as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
+              date: parsed.date || new Date(),
+              messageId: parsed.messageId || '',
+              inReplyTo: parsed.inReplyTo || ''
+            };
+            
+            // Set flags to empty array if not available
+            item_json.labels = [];
+            
+            // Set size from parsed data
+            item_json.size = rawContent.length;
+            
+            context.logger?.debug(`Raw message parsing successful for email ${email.uid}`);
+          }
+        } catch (error) {
+          context.logger?.warn(`Failed to parse raw message for email ${email.uid}: ${error.message}`);
+        }
+      }
+
       // Note: All envelope fields are already included in the envelope object above
 
       // process the headers
@@ -339,7 +374,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
       var textPartId = null;
       var htmlPartId = null;
       var attachmentsInfo = [];
-      
+
       context.logger?.debug(`Analyzing body structure for email ${email.uid}: ${analyzeBodyStructure}`);
 
 
@@ -432,6 +467,49 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
         // if include body is enabled but no content was found, set empty values
         if (enhancedFields && !item_json.text && !item_json.html) {
+          item_json.text = '';
+          item_json.markdown = '';
+          item_json.html = '';
+        }
+      }
+
+      // Fallback: If body content is missing and enhanced fields are enabled, try raw message parsing
+      if (enhancedFields && (!item_json.text && !item_json.html) && (!textPartId && !htmlPartId)) {
+        context.logger?.debug(`Body content missing for email ${email.uid}, trying raw message parsing...`);
+        try {
+          const rawMessage = await client.download(email.uid.toString(), 'TEXT', { uid: true });
+          if (rawMessage.content) {
+            const rawContent = await streamToString(rawMessage.content);
+            const parsed = await simpleParser(rawContent);
+            
+            // Extract content from parsed data
+            if (parsed.text) {
+              item_json.text = parsed.text;
+              item_json.markdown = parsed.text; // Plain text is already readable
+              item_json.html = textToSimplifiedHtml(parsed.text);
+            }
+            
+            if (parsed.html) {
+              item_json.html = parsed.html;
+              item_json.markdown = htmlToMarkdown(parsed.html);
+              // if we don't have text content, create plain text from the HTML content
+              if (!item_json.text) {
+                item_json.text = htmlToText(parsed.html);
+              }
+            }
+            
+            // If still no content, set empty values
+            if (!item_json.text && !item_json.html) {
+              item_json.text = '';
+              item_json.markdown = '';
+              item_json.html = '';
+            }
+            
+            context.logger?.debug(`Raw message body parsing successful for email ${email.uid}`);
+          }
+        } catch (error) {
+          context.logger?.warn(`Failed to parse raw message body for email ${email.uid}: ${error.message}`);
+          // Set empty values as fallback
           item_json.text = '';
           item_json.markdown = '';
           item_json.html = '';
