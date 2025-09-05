@@ -1,3 +1,19 @@
+## [2.12.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.0...v2.12.1) (2025-01-XX)
+
+### Performance Improvements
+
+* **Fixed "Running Forever" Issue**: Completely rewrote email body fetching to use `source: true` instead of complex bodyStructure parsing
+* **Simplified Content Extraction**: Removed complex bodyStructure analysis and part-by-part downloading
+* **Better Performance**: Direct email source parsing with `simpleParser` for much faster processing
+* **Eliminated Timeouts**: No more individual part downloads that could cause infinite loops
+
+### Technical Changes
+
+* **Removed Complex Logic**: Eliminated bodyStructure parsing, part ID detection, and individual part downloads
+* **Direct Source Parsing**: Use `email.source` with `simpleParser` for immediate content extraction
+* **Cleaner Code**: Removed unused functions and simplified the email processing pipeline
+* **Better Error Handling**: More reliable content extraction with proper fallbacks
+
 ## [2.12.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.10...v2.12.0) (2025-01-XX)
 
 ### New Features

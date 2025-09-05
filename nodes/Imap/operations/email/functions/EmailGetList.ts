@@ -1,11 +1,9 @@
 import { FetchMessageObject, FetchQueryObject, ImapFlow } from "imapflow";
-import { Readable } from "stream";
 import { IExecuteFunctions, INodeExecutionData } from "n8n-workflow";
 import { IResourceOperationDef } from "../../../utils/CommonDefinitions";
 import { getMailboxPathFromNodeParameter, parameterSelectMailbox } from "../../../utils/SearchFieldParameters";
 import { emailSearchParameters, getEmailSearchParametersFromNode } from "../../../utils/EmailSearchParameters";
 import { simpleParser } from 'mailparser';
-import { getEmailPartsInfoRecursive } from "../../../utils/EmailParts";
 import { NodeHtmlMarkdown } from 'node-html-markdown';
 
 
@@ -19,35 +17,9 @@ enum EmailParts {
   Headers = 'headers',
 }
 
-function streamToString(stream: Readable): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!stream) {
-      resolve('');
-    } else {
-      const chunks: any[] = [];
-      stream.on('data', (chunk) => {
-        chunks.push(chunk);
-      });
-      stream.on('end', () => {
-        resolve(Buffer.concat(chunks).toString('utf8'));
-      });
-      stream.on('error', reject);
-    }
-  });
-}
+// Removed unused streamToString function
 
-function textToSimplifiedHtml(text: string): string {
-  if (!text) return '';
-
-  // Convert text to simplified HTML
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
-    .replace(/\r\n/g, '<br>')
-    .replace(/\r/g, '<br>');
-}
+// Removed unused textToSimplifiedHtml function
 
 
 // Initialize HTML to Markdown converter
@@ -265,9 +237,9 @@ export const getEmailsListOperation: IResourceOperationDef = {
     // get enhanced fields parameter
     const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
 
-    // if enhanced fields are enabled, we need bodyStructure to extract content
+    // if enhanced fields are enabled, fetch source for better content extraction
     if (enhancedFields) {
-      fetchQuery.bodyStructure = true;
+      fetchQuery.source = true; // Use source instead of bodyStructure for better performance
     }
 
     // get limit parameter
@@ -314,16 +286,14 @@ export const getEmailsListOperation: IResourceOperationDef = {
         item_json.size = email.size;
       }
 
-      // Fallback: If structured data is missing, try to parse raw message
-      if (!email.envelope && !email.flags && enhancedFields) {
-        context.logger?.debug(`Structured data missing for email ${email.uid}, trying raw message parsing...`);
+      // If enhanced fields are enabled and we have source, parse it directly
+      if (enhancedFields && email.source) {
+        context.logger?.debug(`Parsing email source for UID ${email.uid}...`);
         try {
-          const rawMessage = await client.download(email.uid.toString(), 'TEXT', { uid: true });
-          if (rawMessage.content) {
-            const rawContent = await streamToString(rawMessage.content);
-            const parsed = await simpleParser(rawContent);
+          const parsed = await simpleParser(email.source);
 
-            // Create envelope-like structure from parsed data
+          // Create envelope-like structure from parsed data if not available
+          if (!item_json.envelope) {
             item_json.envelope = {
               subject: parsed.subject || '',
               from: parsed.from ? [{ address: (parsed.from as any).value?.[0]?.address || '', name: (parsed.from as any).value?.[0]?.name || '' }] : [],
@@ -335,17 +305,50 @@ export const getEmailsListOperation: IResourceOperationDef = {
               messageId: parsed.messageId || '',
               inReplyTo: parsed.inReplyTo || ''
             };
-
-            // Set flags to empty array if not available
-            item_json.labels = [];
-
-            // Set size from parsed data
-            item_json.size = rawContent.length;
-
-            context.logger?.debug(`Raw message parsing successful for email ${email.uid}`);
           }
+
+          // Set flags to empty array if not available
+          if (!item_json.labels) {
+            item_json.labels = [];
+          }
+
+          // Set size from source if not available
+          if (!item_json.size) {
+            item_json.size = email.source.length;
+          }
+
+          // Extract body content directly from parsed data
+          if (parsed.text) {
+            item_json.text = parsed.text;
+            item_json.markdown = parsed.text; // Plain text is already readable
+          } else {
+            item_json.text = '';
+            item_json.markdown = '';
+          }
+
+          if (parsed.html) {
+            item_json.html = parsed.html;
+            item_json.markdown = htmlToMarkdown(parsed.html);
+            // If we don't have text content, create plain text from HTML
+            if (!item_json.text) {
+              item_json.text = htmlToText(parsed.html);
+            }
+          } else {
+            item_json.html = '';
+          }
+
+          // Ensure we have all three formats
+          if (!item_json.text) item_json.text = '';
+          if (!item_json.markdown) item_json.markdown = '';
+          if (!item_json.html) item_json.html = '';
+
+          context.logger?.debug(`Email source parsing successful for UID ${email.uid}`);
         } catch (error) {
-          context.logger?.warn(`Failed to parse raw message for email ${email.uid}: ${error.message}`);
+          context.logger?.warn(`Failed to parse email source for UID ${email.uid}: ${error.message}`);
+          // Set empty values as fallback
+          item_json.text = '';
+          item_json.markdown = '';
+          item_json.html = '';
         }
       }
 
@@ -369,150 +372,21 @@ export const getEmailsListOperation: IResourceOperationDef = {
       }
 
 
-      const analyzeBodyStructure = includeAttachmentsInfo || includeTextContent || includeHtmlContent || enhancedFields;
-
-      var textPartId = null;
-      var htmlPartId = null;
-      var attachmentsInfo = [];
-
-      context.logger?.debug(`Analyzing body structure for email ${email.uid}: ${analyzeBodyStructure}`);
-
-
-      if (analyzeBodyStructure) {
-        // workaround: dispositionParameters is an object, but it is not typed as such
-        const bodyStructure = email.bodyStructure as unknown as any;
-
-        if (bodyStructure) {
-          context.logger?.debug(`Body structure found for email ${email.uid}: ${JSON.stringify(bodyStructure)}`);
-
-          const partsInfo = getEmailPartsInfoRecursive(context, bodyStructure);
-          context.logger?.debug(`Parts info for email ${email.uid}: ${JSON.stringify(partsInfo)}`);
-
-          // filter attachments and text/html parts
-          for (const partInfo of partsInfo) {
-            if (partInfo.disposition === 'attachment') {
-              // this is an attachment
-              attachmentsInfo.push({
-                partId: partInfo.partId,
-                filename: partInfo.filename,
-                type: partInfo.type,
-                encoding: partInfo.encoding,
-                size: partInfo.size,
-              });
-            } else {
-              // if there is only one part, to sometimes it has no partId
-              // in that case, ImapFlow uses "TEXT" as partId to download the only part
-              if (partInfo.type === 'text/plain') {
-                textPartId = partInfo.partId || "TEXT";
-                context.logger?.debug(`Found text part for email ${email.uid}: ${textPartId}`);
-              }
-              if (partInfo.type === 'text/html') {
-                htmlPartId = partInfo.partId || "TEXT";
-                context.logger?.debug(`Found HTML part for email ${email.uid}: ${htmlPartId}`);
-              }
-            }
-          }
-        } else {
-          context.logger?.warn(`No body structure found for email ${email.uid}`);
-        }
-      }
-
-      if (includeAttachmentsInfo) {
-        item_json.attachmentsInfo = attachmentsInfo;
-      }
-
-      // fetch text and html content
-      if (includeTextContent || includeHtmlContent || enhancedFields) {
-        if (includeTextContent || enhancedFields) {
-          // always set textContent to null, in case there is no text part
-          item_json.textContent = null;
-          if (textPartId) {
-            const textContent = await client.download(email.uid.toString(), textPartId, {
-              uid: true,
-            });
-            if (textContent.content) {
-              item_json.textContent = await streamToString(textContent.content);
-
-              // if include body is enabled, provide text content
-              if (enhancedFields) {
-                item_json.text = item_json.textContent;
-                item_json.markdown = item_json.textContent; // Plain text is already readable
-                item_json.html = textToSimplifiedHtml(item_json.textContent);
-              }
-            }
-          }
-        }
-        if (includeHtmlContent || enhancedFields) {
-          // always set htmlContent to null, in case there is no html part
-          item_json.htmlContent = null;
-          if (htmlPartId) {
-            const htmlContent = await client.download(email.uid.toString(), htmlPartId, {
-              uid: true,
-            });
-            if (htmlContent.content) {
-              item_json.htmlContent = await streamToString(htmlContent.content);
-
-              // if include body is enabled, provide HTML content
-              if (enhancedFields) {
-                item_json.html = item_json.htmlContent;
-                item_json.markdown = htmlToMarkdown(item_json.htmlContent);
-                // if we don't have text content, create plain text from the HTML content
-                if (!item_json.text) {
-                  item_json.text = htmlToText(item_json.htmlContent);
-                }
-              }
-            }
-          }
-        }
-
-        // if include body is enabled but no content was found, set empty values
-        if (enhancedFields && !item_json.text && !item_json.html) {
-          item_json.text = '';
-          item_json.markdown = '';
-          item_json.html = '';
-        }
-      }
-
-      // Fallback: If body content is missing and enhanced fields are enabled, try raw message parsing
-      if (enhancedFields && (!item_json.text && !item_json.html) && (!textPartId && !htmlPartId)) {
-        context.logger?.debug(`Body content missing for email ${email.uid}, trying raw message parsing...`);
+      // Handle attachment info if requested (simplified approach)
+      if (includeAttachmentsInfo && email.source) {
         try {
-          const rawMessage = await client.download(email.uid.toString(), 'TEXT', { uid: true });
-          if (rawMessage.content) {
-            const rawContent = await streamToString(rawMessage.content);
-            const parsed = await simpleParser(rawContent);
-
-            // Extract content from parsed data
-            if (parsed.text) {
-              item_json.text = parsed.text;
-              item_json.markdown = parsed.text; // Plain text is already readable
-              item_json.html = textToSimplifiedHtml(parsed.text);
-            }
-
-            if (parsed.html) {
-              item_json.html = parsed.html;
-              item_json.markdown = htmlToMarkdown(parsed.html);
-              // if we don't have text content, create plain text from the HTML content
-              if (!item_json.text) {
-                item_json.text = htmlToText(parsed.html);
-              }
-            }
-
-            // If still no content, set empty values
-            if (!item_json.text && !item_json.html) {
-              item_json.text = '';
-              item_json.markdown = '';
-              item_json.html = '';
-            }
-
-            context.logger?.debug(`Raw message body parsing successful for email ${email.uid}`);
+          const parsed = await simpleParser(email.source);
+          if (parsed.attachments && parsed.attachments.length > 0) {
+            item_json.attachmentsInfo = parsed.attachments.map((attachment, index) => ({
+              index: index,
+              filename: attachment.filename || `attachment_${index}`,
+              contentType: attachment.contentType || 'application/octet-stream',
+              size: attachment.size || 0,
+              contentId: attachment.contentId || null,
+            }));
           }
         } catch (error) {
-          context.logger?.warn(`Failed to parse raw message body for email ${email.uid}: ${error.message}`);
-          // Set empty values as fallback
-          item_json.text = '';
-          item_json.markdown = '';
-          item_json.html = '';
+          context.logger?.warn(`Failed to parse attachments for email ${email.uid}: ${error.message}`);
         }
       }
 

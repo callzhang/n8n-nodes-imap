@@ -31,7 +31,7 @@ export class ParameterValidator {
     if (!emailUid || emailUid.trim() === '') {
       throw new Error('Email UID is required and cannot be empty');
     }
-    
+
     // Check if UID is a valid number
     const uidNumber = parseInt(emailUid, 10);
     if (isNaN(uidNumber) || uidNumber <= 0) {
