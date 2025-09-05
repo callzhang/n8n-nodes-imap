@@ -1,3 +1,12 @@
+## [2.11.8](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.7...v2.11.8) (2025-01-XX)
+
+### Improvements
+
+* **Professional HTML to Markdown Conversion**: Replaced custom HTML conversion with `node-html-markdown` library
+* **Better Markdown Quality**: Now uses industry-standard library for more accurate and reliable HTML to Markdown conversion
+* **Simplified Code**: Removed custom HTML parsing logic in favor of proven library
+* **Three Content Formats**: Clean separation of text, markdown, and html fields
+
 ## [2.11.7](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.6...v2.11.7) (2025-01-XX)
 
 ### Features

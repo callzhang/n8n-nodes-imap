@@ -1,6 +1,6 @@
 # <img src="nodes/Imap/node-imap-enhanced-icon.svg"  height="40"> n8n-nodes-imap-enhanced
 
-This is an enhanced n8n community node that adds support for [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol) email servers with advanced features including custom labels, limit parameters, and structured email fields.
+This is an enhanced n8n community node that adds support for [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol) email servers with advanced features including custom labels, limit parameters, and professional HTML to Markdown conversion.
 
 * [Installation](#installation)  
 * [Operations](#operations)  
@@ -27,7 +27,7 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
   * Rename a mailbox
   * ~Delete a mailbox~ (disabled due to danger of accidental data loss and no apparent use case)
 * Email
-  * Get list of emails in a mailbox **with limit parameter and enhanced structured fields**
+  * Get list of emails in a mailbox **with limit parameter and three content formats (text, markdown, html)**
   * Download attachments from an email
   * Move an email to another mailbox
   * Copy an email into another mailbox
@@ -38,10 +38,11 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
 
 ## New Features
 
-### Enhanced Email Fields
-- **Structured Output**: Returns title, from, to, cc, bcc, labels, content (text and HTML)
-- **Simplified HTML**: Converts text content to simplified HTML format
-- **All Email Metadata**: Includes date, messageId, size, and other envelope fields
+### Professional Content Processing
+- **Three Content Formats**: Returns `text`, `markdown`, and `html` fields for email body content
+- **Professional Markdown**: Uses `node-html-markdown` library for accurate HTML to Markdown conversion
+- **Clean Text**: Converts HTML to readable plain text with proper formatting
+- **Standard Fields**: Always includes flags/labels and structured envelope data
 
 ### Custom Labels Support
 - **Search by Custom Labels**: Search emails using custom labels/keywords
@@ -52,6 +53,27 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
 - **Email List Limit**: Control maximum number of emails returned
 - **Mailbox List Limit**: Control maximum number of mailboxes returned
 - **Performance Optimization**: Prevents excessive data fetching
+
+### Output Structure
+```json
+{
+  "seq": 415,
+  "uid": 18718,
+  "mailboxPath": "INBOX",
+  "envelope": {
+    "subject": "Email Subject",
+    "from": [{"name": "Sender", "address": "sender@example.com"}],
+    "to": [{"name": "Recipient", "address": "recipient@example.com"}],
+    "date": "2025-01-XX",
+    "messageId": "<message-id>"
+  },
+  "labels": ["\\Seen"],
+  "size": 12345,
+  "text": "Plain text content",
+  "markdown": "# Header\n\n**Bold** text",
+  "html": "<p>HTML content</p>"
+}
+```
 
 ## Credentials
 
