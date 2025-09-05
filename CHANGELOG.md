@@ -1,3 +1,9 @@
+## [2.11.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.2...v2.11.3) (2025-01-XX)
+
+### Features
+
+* **New Icon**: Added custom "IMAP Enhanced" icon with enhancement indicators (stars, plus signs, gear)
+
 ## [2.11.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.1...v2.11.2) (2025-01-XX)
 
 ### Bug Fixes

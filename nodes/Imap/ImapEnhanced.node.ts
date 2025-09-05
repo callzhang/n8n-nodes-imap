@@ -12,7 +12,7 @@ export class ImapEnhanced implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'IMAP Enhanced',
     name: 'imapEnhanced',
-    icon: 'file:node-imap-icon.svg',
+    icon: 'file:node-imap-enhanced-icon.svg',
     group: ['transform'],
     version: 1,
     subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
