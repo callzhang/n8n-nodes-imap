@@ -1,3 +1,29 @@
+## [2.11.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.0...v2.11.1) (2025-01-XX)
+
+### Bug Fixes
+
+* **Node Name Conflict**: Fixed node name conflict with original IMAP package by changing node name to "IMAP Enhanced" and internal name to "imapEnhanced"
+
+## [2.11.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.10.0...v2.11.0) (2025-01-XX)
+
+### Package Rename
+* **Package Name**: Renamed from `n8n-nodes-imap` to `n8n-nodes-imap-enhanced` to avoid conflicts with the original package
+
+### Features
+
+* **Enhanced Email Fields**: Added structured email fields including title, from, to, cc, bcc, labels, content (text and HTML)
+* **Custom Labels Support**: Added support for custom labels in search operations and label management
+* **Limit Parameters**: Added limit parameters to "Get Many" operations for both emails and mailboxes
+* **New Manage Labels Operation**: Added dedicated operation for managing custom labels (add, remove, set)
+* **Simplified HTML Content**: Added automatic conversion of text content to simplified HTML format
+* **Enhanced Set Flags**: Extended existing Set Flags operation to support custom labels alongside system flags
+
+### Improvements
+
+* **Performance**: Limit parameters prevent excessive data fetching
+* **User Experience**: Structured email fields provide better data organization
+* **Flexibility**: Custom labels support advanced email organization and searching
+
 ## [2.10.0](https://github.com/umanamente/n8n-nodes-imap/compare/v2.9.0...v2.10.0) (2025-06-22)
 
 ### Features

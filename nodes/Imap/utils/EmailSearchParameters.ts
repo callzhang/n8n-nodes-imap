@@ -99,6 +99,33 @@ export const emailSearchParameters : INodeProperties[] = [
       },
     ],
   },
+  // custom labels
+  {
+    displayName: "Custom Labels",
+    name: "customLabels",
+    type: "collection",
+    placeholder: "Add Custom Label",
+    default: {},
+    description: "Search by custom labels (keywords)",
+    options: [
+      {
+        displayName: "Label Name",
+        name: "labelName",
+        type: "string",
+        default: "",
+        description: "Name of the custom label to search for",
+        placeholder: "Important",
+      },
+      {
+        displayName: "Label Value",
+        name: "labelValue",
+        type: "string",
+        default: "",
+        description: "Value to search for in the label",
+        placeholder: "true",
+      },
+    ],
+  },
   {
     displayName: "Search Filters",
     name: "emailSearchFilters",
@@ -201,6 +228,15 @@ export function getEmailSearchParametersFromNode(context: IExecuteFunctions, ite
   }
   if (EmailFlags.Seen in emailFlagsObj) {
     searchObject.seen = emailFlagsObj[EmailFlags.Seen] as boolean;
+  }
+
+  // custom labels
+  const customLabelsObj = context.getNodeParameter('customLabels', itemIndex) as IDataObject;
+  if (customLabelsObj.labelName && customLabelsObj.labelValue) {
+    const labelName = customLabelsObj.labelName as string;
+    const labelValue = customLabelsObj.labelValue as string;
+    // Use keyword search for custom labels
+    searchObject.keyword = `${labelName}:${labelValue}`;
   }
 
   // search filters

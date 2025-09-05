@@ -77,6 +77,58 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         },
       ],
     },
+    {
+      displayName: 'Custom Labels',
+      name: 'customLabels',
+      type: 'fixedCollection',
+      typeOptions: {
+        multipleValues: true,
+      },
+      default: {},
+      placeholder: 'Add Custom Label',
+      description: 'Custom labels (keywords) to add or remove',
+      options: [
+        {
+          displayName: 'Label',
+          name: 'label',
+          values: [
+            {
+              displayName: 'Label Name',
+              name: 'name',
+              type: 'string',
+              default: '',
+              description: 'Name of the custom label',
+              placeholder: 'Important',
+              required: true,
+            },
+            {
+              displayName: 'Label Value',
+              name: 'value',
+              type: 'string',
+              default: '',
+              description: 'Value of the custom label',
+              placeholder: 'true',
+            },
+            {
+              displayName: 'Action',
+              name: 'action',
+              type: 'options',
+              default: 'add',
+              options: [
+                {
+                  name: 'Add',
+                  value: 'add',
+                },
+                {
+                  name: 'Remove',
+                  value: 'remove',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   ],
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
     var returnData: INodeExecutionData[] = [];
@@ -84,6 +136,7 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
     const mailboxPath = getMailboxPathFromNodeParameter(context, itemIndex);
     const emailUid = context.getNodeParameter('emailUid', itemIndex) as string;
     const flags = context.getNodeParameter('flags', itemIndex) as unknown as { [key: string]: boolean };
+    const customLabels = context.getNodeParameter('customLabels', itemIndex) as { label: Array<{ name: string; value: string; action: string }> };
 
     var flagsToSet : string[] = [];
     var flagsToRemove : string[] = [];
@@ -95,8 +148,24 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         }
     }
 
+    // Process custom labels
+    if (customLabels.label && Array.isArray(customLabels.label)) {
+      for (const labelItem of customLabels.label) {
+        if (labelItem.name && labelItem.value) {
+          const labelString = `${labelItem.name}:${labelItem.value}`;
+          if (labelItem.action === 'add') {
+            flagsToSet.push(labelString);
+          } else if (labelItem.action === 'remove') {
+            flagsToRemove.push(labelString);
+          }
+        }
+      }
+    }
+
     let jsonData: IDataObject = {
       uid: emailUid,
+      flagsToSet: flagsToSet,
+      flagsToRemove: flagsToRemove,
     };
 
     context.logger?.info(`Setting flags "${flagsToSet.join(',')}" and removing flags "${flagsToRemove.join(',')}" on email "${emailUid}"`);
@@ -125,12 +194,12 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
         throw new NodeImapError(
           context.getNode(),
-          "Unable to remove flags", 
+          "Unable to remove flags",
           errorsList
         );
       }
     }
-    
+
     returnData.push({
       json: jsonData,
     });

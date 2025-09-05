@@ -35,6 +35,31 @@ function streamToString(stream: Readable): Promise<string> {
   });
 }
 
+function textToSimplifiedHtml(text: string): string {
+  if (!text) return '';
+
+  // Convert text to simplified HTML
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+    .replace(/\r\n/g, '<br>')
+    .replace(/\r/g, '<br>');
+}
+
+function formatEmailAddresses(addresses: any[]): string[] {
+  if (!addresses || !Array.isArray(addresses)) return [];
+
+  return addresses.map(addr => {
+    if (typeof addr === 'string') return addr;
+    if (addr.name && addr.address) {
+      return `${addr.name} <${addr.address}>`;
+    }
+    return addr.address || '';
+  }).filter(addr => addr);
+}
+
 
 export const getEmailsListOperation: IResourceOperationDef = {
   operation: {
@@ -116,6 +141,24 @@ export const getEmailsListOperation: IResourceOperationDef = {
           ],
         },
       },
+    },
+    {
+      displayName: 'Limit',
+      name: 'limit',
+      type: 'number',
+						typeOptions: {
+							minValue: 1,
+						},
+      default: 50,
+      description: 'Max number of results to return',
+      placeholder: '100',
+    },
+    {
+      displayName: 'Enhanced Email Fields',
+      name: 'enhancedFields',
+      type: 'boolean',
+      default: true,
+      description: 'Whether to return structured email fields (title, from, to, cc, bcc, labels, content)',
     }
   ],
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
@@ -175,14 +218,27 @@ export const getEmailsListOperation: IResourceOperationDef = {
     context.logger?.debug(`Search object: ${JSON.stringify(searchObject)}`);
     context.logger?.debug(`Fetch query: ${JSON.stringify(fetchQuery)}`);
 
+    // get limit parameter
+    const limit = context.getNodeParameter('limit', itemIndex) as number;
+
     // wait for all emails to be fetched before processing them
     // because we might need to fetch the body parts for each email,
     // and this will freeze the client if we do it in parallel
     const emailsList: FetchMessageObject[] = [];
+    let count = 0;
     for  await (let email of client.fetch(searchObject, fetchQuery)) {
       emailsList.push(email);
+      count++;
+      // apply limit if specified
+      if (limit > 0 && count >= limit) {
+        context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
+        break;
+      }
     }
     context.logger?.info(`Found ${emailsList.length} emails`);
+
+    // get enhanced fields parameter
+    const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
 
     // process the emails
     for (const email of emailsList) {
@@ -191,6 +247,33 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
       // add mailbox path to the item
       item_json.mailboxPath = mailboxPath;
+
+      // add enhanced email fields if requested
+      if (enhancedFields) {
+        // Extract structured fields from envelope
+        if (email.envelope) {
+          item_json.title = email.envelope.subject || '';
+          item_json.from = formatEmailAddresses(email.envelope.from || []);
+          item_json.to = formatEmailAddresses(email.envelope.to || []);
+          item_json.cc = formatEmailAddresses(email.envelope.cc || []);
+          item_json.bcc = formatEmailAddresses(email.envelope.bcc || []);
+          item_json.replyTo = formatEmailAddresses(email.envelope.replyTo || []);
+          item_json.date = email.envelope.date;
+          item_json.messageId = email.envelope.messageId;
+          item_json.inReplyTo = email.envelope.inReplyTo;
+          // item_json.references = email.envelope.references; // references property not available in envelope
+        }
+
+        // Extract labels/flags
+        if (email.flags) {
+          item_json.labels = email.flags;
+        }
+
+        // Add size information
+        if (email.size) {
+          item_json.size = email.size;
+        }
+      }
 
       // process the headers
       if (includeParts.includes(EmailParts.Headers)) {
@@ -239,7 +322,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
             } else {
               // if there is only one part, to sometimes it has no partId
               // in that case, ImapFlow uses "TEXT" as partId to download the only part
-              if (partInfo.type === 'text/plain') {                
+              if (partInfo.type === 'text/plain') {
                 textPartId = partInfo.partId || "TEXT";
               }
               if (partInfo.type === 'text/html') {
@@ -265,6 +348,12 @@ export const getEmailsListOperation: IResourceOperationDef = {
             });
             if (textContent.content) {
               item_json.textContent = await streamToString(textContent.content);
+
+              // if enhanced fields are enabled, also provide simplified HTML version
+              if (enhancedFields) {
+                item_json.contentText = item_json.textContent;
+                item_json.contentHtml = textToSimplifiedHtml(item_json.textContent);
+              }
             }
           }
         }
@@ -277,8 +366,24 @@ export const getEmailsListOperation: IResourceOperationDef = {
             });
             if (htmlContent.content) {
               item_json.htmlContent = await streamToString(htmlContent.content);
+
+              // if enhanced fields are enabled, also provide the HTML content
+              if (enhancedFields) {
+                item_json.contentHtml = item_json.htmlContent;
+                // if we don't have text content, create simplified HTML from the HTML content
+                if (!item_json.contentText) {
+                  // Strip HTML tags for text version
+                  item_json.contentText = item_json.htmlContent.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+                }
+              }
             }
           }
+        }
+
+        // if enhanced fields are enabled but no content was found, set empty values
+        if (enhancedFields && !item_json.contentText && !item_json.contentHtml) {
+          item_json.contentText = '';
+          item_json.contentHtml = '';
         }
       }
 

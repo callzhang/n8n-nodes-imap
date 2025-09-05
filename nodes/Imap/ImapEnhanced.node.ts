@@ -8,17 +8,17 @@ import { loadMailboxList } from './utils/SearchFieldParameters';
 import { CREDENTIALS_TYPE_CORE_IMAP_ACCOUNT, CREDENTIALS_TYPE_THIS_NODE, credentialNames, getImapCredentials } from './utils/CredentialsSelector';
 
 
-export class Imap implements INodeType {
+export class ImapEnhanced implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'IMAP',
-    name: 'imap',
+    displayName: 'IMAP Enhanced',
+    name: 'imapEnhanced',
     icon: 'file:node-imap-icon.svg',
     group: ['transform'],
     version: 1,
     subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
-    description: 'Retrieve emails via IMAP',
+    description: 'Enhanced IMAP node with custom labels, limit parameters, and structured email fields',
     defaults: {
-      name: 'IMAP',
+      name: 'IMAP Enhanced',
     },
     inputs: [NodeConnectionType.Main],
     // eslint-disable-next-line n8n-nodes-base/node-class-description-outputs-wrong

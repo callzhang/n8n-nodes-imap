@@ -57,12 +57,25 @@ export const getMailboxListOperation: IResourceOperationDef = {
         },
       ],
     },
+    {
+      displayName: 'Limit',
+      name: 'limit',
+      type: 'number',
+						typeOptions: {
+							minValue: 1,
+						},
+      default: 50,
+      description: 'Max number of results to return',
+      placeholder: '50',
+    },
 
   ],
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
     var returnData: INodeExecutionData[] = [];
     context.logger?.info("includeStatusFields: " + context.getNodeParameter('includeStatusFields', itemIndex) as string);
     const includeStatusFields = context.getNodeParameter('includeStatusFields', itemIndex) as string[];
+    const limit = context.getNodeParameter('limit', itemIndex) as number;
+
     var statusQuery = {
       messages: includeStatusFields.includes(MailboxListStatusFields.includeMessageCount),
       recent: includeStatusFields.includes(MailboxListStatusFields.includeRecentCount),
@@ -74,6 +87,8 @@ export const getMailboxListOperation: IResourceOperationDef = {
     const mailboxes = await client.list({
       statusQuery: statusQuery,
     });
+
+    let count = 0;
     for (const mailbox of mailboxes) {
       context.logger?.info(`  ${mailbox.path}`);
       var item_json = {
@@ -85,6 +100,13 @@ export const getMailboxListOperation: IResourceOperationDef = {
       returnData.push({
         json: item_json,
       });
+
+      count++;
+      // apply limit if specified
+      if (limit > 0 && count >= limit) {
+        context.logger?.info(`Reached limit of ${limit} mailboxes, stopping processing`);
+        break;
+      }
     }
     return returnData;
   },
