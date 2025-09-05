@@ -1,3 +1,9 @@
+## [2.11.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.1...v2.11.2) (2025-01-XX)
+
+### Bug Fixes
+
+* **Node Name Conflict**: Removed old Imap.node.js file from dist folder to prevent node name conflicts
+
 ## [2.11.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.11.0...v2.11.1) (2025-01-XX)
 
 ### Bug Fixes
