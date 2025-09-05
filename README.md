@@ -1,4 +1,4 @@
-# <img src="nodes/Imap/node-imap-icon.svg"  height="40"> n8n-nodes-imap
+# <img src="nodes/Imap/node-imap-enhanced-icon.svg"  height="40"> n8n-nodes-imap-enhanced
 
 This is an enhanced n8n community node that adds support for [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol) email servers with advanced features including custom labels, limit parameters, and structured email fields.
 
