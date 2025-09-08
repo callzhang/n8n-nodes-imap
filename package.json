@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-imap-enhanced",
-  "version": "2.15.5",
+  "version": "2.15.6",
   "description": "Enhanced IMAP node with custom labels support, limit parameters, and structured email fields for n8n workflows.",
   "keywords": [
     "n8n-community-node-package"
