@@ -87,7 +87,7 @@ export const downloadAttachmentOperation: IResourceOperationDef = {
         bodyStructure: true,
       };
       const emailInfo = await client.fetchOne(emailUid, query, { uid: true });
-      if (emailInfo.bodyStructure) {
+      if (emailInfo && emailInfo.bodyStructure) {
         const partsInfo = getEmailPartsInfoRecursive(context, emailInfo.bodyStructure);
         for (const partInfo of partsInfo) {
           context.logger?.debug(`Attachment part info: ${JSON.stringify(partInfo)}`);
