@@ -1,3 +1,439 @@
+## [2.15.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.2...v2.15.3) (2025-01-09)
+
+### Critical Bug Fix
+
+* **Fixed Mailbox Encoding Issue**: Resolved "SELECT failed" and "COPY failed" errors when moving emails to Chinese mailboxes
+* **UTF-7 Encoding Handling**: Added proper decoding for UTF-7 encoded mailbox names like `&V4NXPpCuTvY-`
+* **Known Encoding Mapping**: Implemented mapping for known problematic encodings to correct mailbox names
+* **Move Operation Fix**: Move operation now works correctly with Chinese mailbox names
+
+### Technical Details
+
+* **Root Cause**: n8n was passing UTF-7 encoded mailbox names (`&V4NXPpCuTvY-`) instead of actual names (`垃圾邮件`)
+* **Solution**: Added `decodeMailboxPath` function with known encoding mappings and UTF-7 fallback
+* **Error Prevention**: Prevents "SELECT failed" and "COPY failed" errors when using Chinese mailboxes
+* **Backward Compatibility**: Normal mailbox names (INBOX, etc.) continue to work without changes
+
+## [2.15.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.1...v2.15.2) (2025-01-09)
+
+### Critical Bug Fix
+
+* **Reverted Move Operation Changes**: Restored the "Source Mailbox" parameter in Move operation
+* **Fixed n8n Context Issue**: Corrected the misunderstanding about n8n node execution context
+* **Proper IMAP Implementation**: Each n8n operation is stateless and requires explicit mailbox specification
+* **Reliable Operation**: Move operation now works correctly in n8n workflows
+
+### Technical Details
+
+* **n8n Architecture Understanding**: n8n operations are executed independently without persistent context
+* **IMAP Session Management**: Each operation creates its own IMAP session and must specify source mailbox
+* **Parameter Restoration**: Restored the original 3-parameter structure (Source Mailbox + Email UID + Destination Mailbox)
+* **Error Prevention**: Prevents runtime failures that would occur with the context-dependent approach
+
+## [2.15.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.0...v2.15.1) (2025-01-09)
+
+### UX Improvement
+
+* **Simplified Move Operation**: Removed redundant "Source Mailbox" parameter from Move operation
+* **Smart Context Detection**: Move operation now automatically uses the current mailbox context as the source
+* **Cleaner Interface**: Reduced from 3 parameters to 2 parameters (Email UID + Destination Mailbox)
+* **Better User Experience**: Users no longer need to specify the source mailbox when moving emails
+
+### Technical Improvements
+
+* **Current Mailbox Context**: Leverages imapflow's current mailbox context (`client.mailbox.path`)
+* **Type Safety**: Added proper TypeScript handling for mailbox object types
+* **Fallback Logic**: Graceful fallback to 'INBOX' if no current mailbox context is available
+* **Consistent Behavior**: Move operation now works seamlessly with the current mailbox selection
+
+## [2.15.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.6...v2.15.0) (2025-01-09)
+
+### Major UX Improvement
+
+* **Unified Mailbox Selection**: Combined three separate mailbox controls into one clean multiple selection field
+* **Simplified Interface**: Replaced single mailbox selector, multiple mailboxes field, and "Search All Mailboxes" checkbox with one unified control
+* **Default "ALL" Selection**: "ALL" is now the default option, making it easy to search across all mailboxes
+* **Flexible Selection**: Users can select "ALL" or choose specific mailboxes, or combine both approaches
+
+### Technical Improvements
+
+* **Cleaner Parameter Structure**: Reduced parameter complexity from 3 separate controls to 1 unified control
+* **Better User Experience**: More intuitive interface with clear descriptions and default behavior
+* **Consistent Behavior**: Both "Get Many" and "Get Single Email" operations now use the same unified mailbox selection
+* **Dynamic Options**: Mailbox options are loaded dynamically from the server with "ALL" option at the top
+
+### Breaking Changes
+
+* **Parameter Names Changed**: 
+  - `mailboxPath` (single) + `multipleMailboxes` (array) + `searchAllMailboxes` (boolean) → `mailboxes` (array)
+  - Default value is now `['ALL']` instead of separate controls
+* **Migration**: Existing workflows will need to be updated to use the new unified `mailboxes` parameter
+
+## [2.14.6](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.5...v2.14.6) (2025-01-09)
+
+### Bug Fix
+
+* **EmailGetSingle Null Safety**: Fixed potential null reference error in EmailGetSingle operation when accessing envelope.subject
+* **Comprehensive Null Safety Review**: Reviewed all operations for similar null safety issues
+* **Safe Property Access**: Added safe property access using optional chaining for envelope.subject
+
+### Technical Improvements
+
+* **Null Safety Audit**: Conducted comprehensive review of all operations for potential null reference errors
+* **Safe Logging**: Improved logging to handle cases where envelope data might be missing
+* **Error Prevention**: Added defensive programming practices to prevent similar issues
+
+## [2.14.5](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.4...v2.14.5) (2025-01-09)
+
+### Bug Fix
+
+* **EmailDownload Error Fixed**: Fixed "Cannot read properties of undefined (reading 'toString')" error in Download EML operation
+* **Null Safety**: Added proper null checks for email source data before calling toString()
+* **Better Error Messages**: Added descriptive error messages for missing email UID and email not found scenarios
+* **Parameter Validation**: Added validation for required email UID parameter
+
+### Technical Improvements
+
+* **Error Handling**: Improved error handling in EmailDownload operation with proper null checks
+* **User Feedback**: Better error messages to help users understand what went wrong
+* **Data Validation**: Added validation for email UID parameter to prevent empty values
+
+## [2.14.4](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.3...v2.14.4) (2025-01-09)
+
+### Bug Fix
+
+* **Multiple Mailboxes Dropdown Fixed**: Fixed the multiple mailboxes dropdown to properly load all available mailboxes from the server
+* **Method Registration Corrected**: Created separate `loadMailboxOptions` function for `loadOptions` method registration
+* **Dynamic Loading**: Multiple mailboxes parameter now correctly displays all mailboxes instead of just INBOX
+
+### Technical Improvements
+
+* **Proper Method Types**: Separated `loadMailboxList` (for `listSearch`) and `loadMailboxOptions` (for `loadOptions`)
+* **Return Type Compatibility**: Ensured correct return types for each method registration type
+* **Method Registration**: Both `loadOptions` and `listSearch` methods are now properly registered
+
+## [2.14.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.2...v2.14.3) (2025-01-09)
+
+### Critical Bug Fix
+
+* **Method Registration Fixed**: Fixed "Node type does not have method defined" error by using correct `searchListMethod` instead of `loadOptionsMethod`
+* **Parameter Loading**: Multiple mailboxes parameter now properly loads mailbox options from the server
+* **Method Compatibility**: Ensured proper compatibility between parameter type and method registration
+
+### Technical Improvements
+
+* **Correct Method Type**: Changed from `loadOptionsMethod` to `searchListMethod` for `multiOptions` parameters
+* **Proper Registration**: Method is correctly registered under `listSearch` in the node's methods property
+* **Error Resolution**: Resolved the method definition error that was preventing mailbox loading
+
+## [2.14.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.1...v2.14.2) (2025-01-09)
+
+### Critical Bug Fix
+
+* **Mailbox Loading Fixed**: Reverted to original working `resourceLocator` parameter type to fix `[object Object]` error
+* **Multiple Mailbox Support**: Added new approach with separate parameters for multiple mailbox selection
+* **Backward Compatibility**: Maintained original single mailbox functionality while adding new features
+
+### New Features
+
+* **Multiple Mailboxes Parameter**: Added optional "Multiple Mailboxes" parameter for selecting additional mailboxes
+* **Search All Mailboxes**: Added "Search All Mailboxes" boolean option to search across all available mailboxes
+* **Flexible Selection**: Users can now choose between single mailbox, multiple specific mailboxes, or all mailboxes
+
+### Technical Improvements
+
+* **Parameter Structure**: Restored original `resourceLocator` parameter structure that works reliably
+* **Enhanced Logic**: Improved mailbox selection logic to handle multiple scenarios
+* **Better UX**: Clear separation between primary mailbox and additional mailboxes
+
+## [2.14.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.14.0...v2.14.1) (2025-01-09)
+
+### Bug Fixes
+
+* **Mailbox Loading Error**: Fixed critical bug where mailbox fetching returned `[object Object]` instead of proper array
+* **Error Handling**: Enhanced error handling in `loadMailboxList()` function to prevent crashes
+* **Type Safety**: Added proper type checking to ensure mailbox parameters are arrays
+* **Graceful Fallbacks**: Improved fallback behavior when mailbox operations fail
+
+### Technical Improvements
+
+* **Robust Error Handling**: Added comprehensive error handling in mailbox-related functions
+* **Array Validation**: Added validation to ensure mailbox lists are proper arrays
+* **Better Logging**: Enhanced logging for debugging mailbox loading issues
+* **Fallback Behavior**: Improved fallback to INBOX when mailbox operations fail
+
+## [2.14.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.13.0...v2.14.0) (2025-01-09)
+
+### Multiple Mailbox Support
+
+* **Multiple Mailbox Selection**: Enhanced mailbox parameter to support selecting multiple mailboxes simultaneously
+* **ALL Mailboxes Option**: Empty mailbox selection now defaults to searching ALL available mailboxes
+* **Multi-Selection UI**: Updated mailbox parameter to use multiOptions for better user experience
+* **Mailbox Path in Output**: Email results now include the source mailbox path for better tracking and organization
+
+### Enhanced Operations
+
+* **EmailGetList Operation**: Now iterates through multiple mailboxes and aggregates results with proper limit handling
+* **EmailGetSingle Operation**: Can search for specific UID across multiple mailboxes until found
+* **Improved Error Handling**: Graceful fallbacks when individual mailboxes fail to open or search
+* **Better Logging**: Enhanced logging to show which mailboxes are being searched and results per mailbox
+
+### Technical Improvements
+
+* **New Functions**: Added `getMailboxPathsFromNodeParameter()` and `getAllMailboxes()` for multi-mailbox support
+* **Enhanced Validation**: Added `ParameterValidator.validateMailboxes()` method for multi-mailbox validation
+* **Dynamic Loading**: Updated mailbox parameter to use `loadOptionsMethod` for dynamic mailbox list loading
+* **Performance Optimization**: Efficient iteration through mailboxes with early termination on limit reached
+
+### Breaking Changes
+
+* **Mailbox Parameter**: Changed from single selection to multi-selection (multiOptions)
+* **Default Behavior**: Empty mailbox selection now searches ALL mailboxes instead of defaulting to INBOX
+* **Output Format**: Email results now include `mailboxPath` field indicating the source mailbox
+
+### Migration Guide
+
+* **Existing Workflows**: Update mailbox selection to explicitly choose INBOX if you want the previous single-mailbox behavior
+* **New Workflows**: Leave mailbox selection empty to search all mailboxes, or select specific mailboxes as needed
+* **Output Processing**: Update any downstream nodes that process email results to handle the new `mailboxPath` field
+
+## [2.13.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.12...v2.13.0) (2025-01-XX)
+
+### Major Refactor: Unified Message Parts System
+
+* **Removed "Include Body" Parameter**: Eliminated the separate "Include Body" parameter that was duplicating functionality
+* **Enhanced Message Parts**: Added "Markdown Content" option to the existing "Include Message Parts" dropdown
+* **Unified Content Processing**: All content types (text, HTML, markdown) now use the same efficient processing pipeline
+* **Cleaner Interface**: Simplified the user interface by consolidating content options into a single, intuitive dropdown
+* **Better Performance**: Optimized content fetching by reusing the existing message parts infrastructure
+* **Consistent Behavior**: Both "Get Many" and "Get Single Email" operations now use the same message parts system
+
+### Technical Improvements
+
+* Refactored EmailGetList.ts to use existing Message Parts instead of separate Include Body logic
+* Refactored EmailGetSingle.ts to use the same Message Parts system for consistency
+* Added MarkdownContent to EmailParts enum across both operations
+* Integrated markdown generation into existing message parts processing
+* Removed redundant parameters and simplified the codebase
+* Maintained all existing functionality while improving code organization
+
+### Breaking Changes
+
+* **"Include Body" parameter removed**: Users should now use "Include Message Parts" dropdown instead
+* **Default behavior**: Text Content, HTML Content, and Markdown Content are now selected by default in "Get Single Email"
+* **Field names**: Content fields are now named `textContent`, `htmlContent`, and `markdownContent` (instead of `text`, `html`, `markdown`)
+
+## [2.12.12](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.11...v2.12.12) (2025-01-XX)
+
+### Enhanced Custom Labels with Predefined Values
+
+* **Dropdown Values**: Added predefined common label values (true, false, high, medium, low, urgent, important, reviewed, pending, completed)
+* **Custom Value Option**: Added "Custom Value" option for flexibility when predefined values don't fit
+* **Conditional Field**: Custom Value field only appears when "Custom Value" is selected
+* **Better UX**: Users can now choose from common values or enter their own custom value
+* **Reduced Errors**: Predefined options reduce typos and ensure consistency
+
+### Technical Improvements
+
+* Converted Label Value from free text to dropdown with predefined options
+* Added conditional Custom Value field that appears only when needed
+* Updated validation logic to handle both predefined and custom values
+* Enhanced error messages to distinguish between missing value and missing custom value
+
+## [2.12.11](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.10...v2.12.11) (2025-01-XX)
+
+### Improved Custom Labels UX
+
+* **Better Validation**: Added validation to prevent incomplete custom labels from being silently ignored
+* **Clearer Field Requirements**: Made Label Value field required with better placeholder text
+* **Enhanced Error Messages**: Added descriptive error messages when custom labels are incomplete
+* **Improved Action Descriptions**: Added clear descriptions for Add/Remove/Set actions
+* **Better User Guidance**: Updated descriptions to clarify that both Label Name and Label Value are required
+
+### Technical Improvements
+
+* Added validation logic to detect incomplete custom labels
+* Enhanced error messages with specific guidance on what's missing
+* Improved field descriptions and placeholders for better UX
+* Added action descriptions to clarify the difference between Add, Remove, and Set
+
+## [2.12.10](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.9...v2.12.10) (2025-01-XX)
+
+### Simplified Move Email Operation
+
+* **Removed Source Mailbox Parameter**: Eliminated the "From folder" parameter from the Move Email operation
+* **Streamlined Interface**: Now uses the current mailbox context as the source, reducing parameter complexity
+* **Better User Experience**: Users only need to specify the destination mailbox, making the operation more intuitive
+* **Consistent with Other Operations**: Aligns with the pattern used in other email operations
+
+### Technical Improvements
+
+* Updated EmailMove operation to use current mailbox context as source
+* Removed redundant source mailbox parameter and related constants
+* Simplified parameter structure while maintaining full functionality
+
+## [2.12.9](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.8...v2.12.9) (2025-01-XX)
+
+### Enhanced Markdown Conversion
+
+* **Cleaner Markdown Output**: Significantly reduced verbosity in markdown conversion
+* **Simplified Tables**: Convert complex HTML tables to simple text format instead of verbose markdown tables
+* **Reduced Formatting**: Removed excessive separators, line breaks, and markdown formatting
+* **Better Link Handling**: Simplified long URLs and redundant link formatting
+* **Concise Output**: Post-processing to clean up excessive whitespace and empty elements
+
+### Technical Improvements
+
+* Enhanced `htmlToMarkdown` function with better post-processing
+* Removed excessive separators (10+ dashes/pipes reduced to 3)
+* Simplified complex table structures to readable text
+* Improved link formatting for better readability
+* Applied consistent improvements across all email operations
+
+## [2.12.8](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.7...v2.12.8) (2025-01-XX)
+
+### Bug Fix
+
+* **Fixed Parameter Type Error**: Resolved "emailUids.trim is not a function" error in Set Flags operation
+* **Robust Parameter Handling**: Enhanced ParameterValidator to handle non-string inputs gracefully
+* **Type Safety**: Added proper string conversion for emailUid parameter
+
+### Technical Details
+
+* Fixed `ParameterValidator.validateUids()` to accept and convert non-string inputs
+* Added `String()` conversion for emailUid parameter in EmailSetFlags operation
+* Improved error handling for parameter validation
+
+## [2.12.7](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.6...v2.12.7) (2025-01-XX)
+
+### Unified Flag and Label Management
+
+* **Combined Operations**: Merged "Set Flags" and "Manage Labels" operations for better user experience
+* **Enhanced Custom Labels**: Added "Set" action to Custom Labels in Set Flags operation
+* **Simplified Interface**: Removed redundant "Manage Labels" operation to reduce confusion
+* **Complete Flag Management**: Single operation now handles all email flags and custom labels
+
+### Technical Improvements
+
+* **Set Action Implementation**: Proper "set" logic that replaces all existing custom labels
+* **Smart Label Detection**: Automatically identifies and removes existing custom labels before setting new ones
+* **Unified Processing**: Combined standard flags and custom labels processing in one operation
+* **Code Consolidation**: Removed EmailManageLabels.ts and consolidated functionality
+
+## [2.12.6](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.5...v2.12.6) (2025-01-XX)
+
+### Enhanced HTML Cleaner with Base64 Image Removal
+
+* **Base64 Image Removal**: Added aggressive base64 image removal to handle emails with large embedded images
+* **Dramatic Size Reduction**: Can reduce HTML size by 99.9% for emails with large base64 images
+* **Image Placeholders**: Replaces base64 images with readable placeholders like "[Image removed - base64 data]"
+* **Large Data URL Removal**: Removes large base64 data URLs (>100 characters) that bloat email content
+* **Response Size Optimization**: Can reduce overall response size by 99.6% for emails with embedded images
+
+### Performance Improvements
+
+* **Email 1**: 3.93 KB → 0.89 KB (77.4% reduction)
+* **Email 2**: 1052.10 KB → 0.27 KB (100.0% reduction) - removed 1050.93 KB of base64 image data
+* **Overall**: 1056.03 KB → 1.15 KB (99.9% reduction)
+* **Response Size**: 1060.23 KB → 4.29 KB (99.6% reduction)
+
+### Technical Improvements
+
+* **Smart Base64 Detection**: Identifies and removes base64 image data while preserving text content
+* **Image Tag Replacement**: Replaces `<img src="data:image/...">` with `<img src="[Image removed - base64 data]">`
+* **Large Data URL Cleanup**: Removes large base64 data URLs that exceed 100 characters
+* **Content Preservation**: Maintains all readable text content while removing binary data
+
+## [2.12.5](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.4...v2.12.5) (2025-01-XX)
+
+### Enhanced Email Download Operation
+
+* **Reused Email Body Processing**: Integrated the same email body fetching and processing functions used in Get Many and Get Single operations
+* **HTML Cleaning Support**: Added HTML cleaning functionality to the Download operation
+* **Structured Email Data**: Download operation now supports extracting structured email fields (envelope, text, markdown, html)
+* **Consistent Processing**: All email operations now use the same body processing logic for consistency
+* **Size Optimization**: Download operation benefits from the same HTML cleaning and size reduction features
+
+### New Parameters for Download Operation
+
+* **Include Email Body**: Whether to include parsed email body content in the output (default: false)
+* **Clean HTML**: Whether to clean HTML by removing unreadable tags and attributes (default: true)
+* **Include Raw HTML**: Whether to include the original raw HTML content (default: false)
+
+### Technical Improvements
+
+* **Code Reuse**: Eliminated code duplication by reusing email body processing functions
+* **Consistent API**: All email operations now provide the same body processing capabilities
+* **Better Integration**: Download operation can now provide both EML file and structured email data
+
+## [2.12.4](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.3...v2.12.4) (2025-01-XX)
+
+### Default Behavior Changes for Better Performance
+
+* **Clean HTML by Default**: HTML cleaning is now enabled by default for all email operations
+* **Exclude Raw HTML by Default**: Raw HTML content is excluded by default to prevent large responses
+* **Include Raw HTML Option**: Added "Include Raw HTML" parameter for cases where original HTML is needed
+* **Optimized Defaults**: New defaults prioritize readable content over raw data
+* **Size Reduction**: Can reduce response size by 77%+ for normal emails with complex styling
+
+### New Parameters
+
+* **Include Raw HTML**: Whether to include the original raw HTML content (default: false)
+* **Clean HTML**: Now defaults to true for better readability and smaller responses
+
+### Technical Improvements
+
+* **Smart Defaults**: Clean HTML enabled, raw HTML excluded by default
+* **Conditional Raw HTML**: Raw HTML only included when explicitly requested
+* **Size Indicators**: Added `htmlRaw`, `htmlRawSizeKB` fields when raw HTML is included
+* **Better Performance**: Smaller responses by default with option to include raw data when needed
+
+## [2.12.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.2...v2.12.3) (2025-01-XX)
+
+### HTML Cleaning & Readability Improvements
+
+* **Smart HTML Cleaner**: Added intelligent HTML cleaning function that removes unreadable tags and attributes
+* **Clean HTML Option**: Added "Clean HTML" parameter to enable/disable HTML cleaning for better readability
+* **Tag Optimization**: Removes style attributes, class attributes, and converts divs to paragraphs
+* **Entity Conversion**: Converts HTML entities (&nbsp;, &amp;, etc.) to readable characters
+* **Size Reduction**: Can reduce HTML size by 77%+ for normal emails with complex styling
+* **Readability Enhancement**: Converts complex nested divs to simple paragraph structure
+
+### New Parameters
+
+* **Clean HTML**: Whether to clean HTML by removing unreadable tags and attributes
+* **HTML Cleaning Indicators**: Added `htmlCleaned`, `htmlOriginalSizeKB`, `htmlCleanedSizeKB` fields
+
+### Technical Improvements
+
+* **Intelligent Tag Processing**: Removes script, style, and comment tags completely
+* **Attribute Cleanup**: Removes style, class, id, and other non-essential attributes
+* **Format Conversion**: Converts divs to paragraphs, spans to plain text, br tags to newlines
+* **Entity Decoding**: Properly converts HTML entities to readable characters
+* **Whitespace Cleanup**: Removes empty paragraphs and excessive newlines
+
+## [2.12.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.1...v2.12.2) (2025-01-XX)
+
+### Performance Optimizations
+
+* **Large Content Handling**: Added options to handle very large email content that was causing 1MB+ responses
+* **Content Size Limits**: Added "Content Size Limit" parameter to truncate content exceeding specified KB limit
+* **Exclude Large HTML**: Added "Exclude Large HTML" option to automatically exclude HTML content >100KB
+* **Size Monitoring**: Added detailed logging of content sizes for monitoring and debugging
+* **Response Size Reduction**: Can reduce response size by 99%+ for emails with very large HTML content
+
+### New Parameters
+
+* **Content Size Limit**: Maximum size (in KB) for individual content fields (0 = no limit)
+* **Exclude Large HTML**: Automatically exclude HTML content for emails larger than 100KB
+* **Size Indicators**: Added `htmlExcluded`, `htmlTruncated`, `htmlSizeKB`, `htmlOriginalSizeKB` fields
+
+### Technical Improvements
+
+* **Smart Content Processing**: Intelligent handling of large HTML content without breaking functionality
+* **Better Logging**: Detailed size information for troubleshooting large email issues
+* **Graceful Degradation**: Maintains text and markdown content even when HTML is excluded
+
 ## [2.12.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.12.0...v2.12.1) (2025-01-XX)
 
 ### Performance Improvements

@@ -1,6 +1,6 @@
 # <img src="nodes/Imap/node-imap-enhanced-icon.svg"  height="40"> n8n-nodes-imap-enhanced
 
-This is an enhanced n8n community node that adds support for [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol) email servers with advanced features including custom labels, limit parameters, and professional HTML to Markdown conversion.
+This is an enhanced n8n community node that adds support for [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol) email servers with advanced features including multiple mailbox support, custom labels, limit parameters, and professional HTML to Markdown conversion.
 
 * [Installation](#installation)  
 * [Operations](#operations)  
@@ -27,7 +27,8 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
   * Rename a mailbox
   * ~Delete a mailbox~ (disabled due to danger of accidental data loss and no apparent use case)
 * Email
-  * Get list of emails in a mailbox **with limit parameter and three content formats (text, markdown, html)**
+  * **Get list of emails from multiple mailboxes** **with limit parameter and three content formats (text, markdown, html)**
+  * **Get single email from multiple mailboxes** with comprehensive content processing
   * Download attachments from an email
   * Move an email to another mailbox
   * Copy an email into another mailbox
@@ -44,6 +45,12 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
 - **Clean Text**: Converts HTML to readable plain text with proper formatting
 - **Standard Fields**: Always includes flags/labels and structured envelope data
 
+### Multiple Mailbox Support
+- **Multi-Selection**: Select multiple mailboxes simultaneously for comprehensive email searches
+- **ALL Mailboxes Option**: Empty mailbox selection automatically searches ALL available mailboxes
+- **Cross-Mailbox Search**: Find emails across multiple mailboxes in a single operation
+- **Mailbox Tracking**: Each email result includes the source mailbox path for better organization
+
 ### Custom Labels Support
 - **Search by Custom Labels**: Search emails using custom labels/keywords
 - **Label Management**: Add, remove, or set custom labels on emails
@@ -53,6 +60,12 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
 - **Email List Limit**: Control maximum number of emails returned
 - **Mailbox List Limit**: Control maximum number of mailboxes returned
 - **Performance Optimization**: Prevents excessive data fetching
+
+### Text Search Limitations & Solutions
+- **Server Limitations**: Some IMAP servers (like Alimail `imap.qiye.aliyun.com`) don't support text-based searches (`SUBJECT`, `BODY`, `FROM`, `TO`)
+- **Recommended Workaround**: Use "Get Many" operation with multiple mailboxes, then filter results locally using n8n's "Filter" node
+- **Cross-Mailbox Search**: Our multiple mailbox feature is perfect for this - search all mailboxes and filter locally
+- **Better Performance**: Local filtering gives you more control and works reliably across all IMAP servers
 
 ### Output Structure
 ```json
@@ -73,6 +86,27 @@ NPMJS: [n8n-nodes-imap-enhanced](https://www.npmjs.com/package/n8n-nodes-imap-en
   "markdown": "# Header\n\n**Bold** text",
   "html": "<p>HTML content</p>"
 }
+```
+
+## Usage Examples
+
+### Multiple Mailbox Search
+To search for emails across multiple mailboxes:
+
+1. **Search All Mailboxes**: Leave the "Mailbox" field empty to search all available mailboxes
+2. **Search Specific Mailboxes**: Select multiple mailboxes (e.g., INBOX, Sent, Drafts)
+3. **Filter Results**: Use n8n's "Filter" node to search for specific text content
+
+### Text Search Workaround
+For IMAP servers that don't support text-based searches (like Alimail):
+
+1. Use "Get Many" operation with empty mailbox selection (searches all mailboxes)
+2. Add a "Filter" node after the IMAP node
+3. Configure the filter to search in email fields like `envelope.subject`, `textContent`, `htmlContent`, etc.
+
+Example filter expression:
+```
+{{ $json.envelope.subject.includes("Mary") || $json.textContent.includes("Mary") }}
 ```
 
 ## Credentials

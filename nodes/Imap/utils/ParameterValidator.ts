@@ -25,6 +25,28 @@ export class ParameterValidator {
   }
 
   /**
+   * Validate multiple mailbox parameters
+   * Empty array is allowed (means ALL mailboxes)
+   */
+  static validateMailboxes(mailboxParams: string[]): void {
+    if (!Array.isArray(mailboxParams)) {
+      throw new Error('Mailbox parameter must be an array');
+    }
+
+    // Empty array is allowed (means ALL mailboxes)
+    if (mailboxParams.length === 0) {
+      return;
+    }
+
+    // Validate each mailbox
+    for (const mailbox of mailboxParams) {
+      if (!mailbox || mailbox.trim() === '') {
+        throw new Error('All mailbox names must be non-empty strings');
+      }
+    }
+  }
+
+  /**
    * Validate email UID parameter
    */
   static validateUid(emailUid: string): void {
@@ -42,12 +64,15 @@ export class ParameterValidator {
   /**
    * Validate multiple UIDs (comma-separated)
    */
-  static validateUids(emailUids: string): string[] {
-    if (!emailUids || emailUids.trim() === '') {
+  static validateUids(emailUids: string | number | any): string[] {
+    // Convert to string if not already
+    const uidString = String(emailUids || '');
+
+    if (!uidString || uidString.trim() === '') {
       throw new Error('Email UIDs are required and cannot be empty');
     }
 
-    const uids = emailUids.split(',').map(uid => uid.trim()).filter(uid => uid !== '');
+    const uids = uidString.split(',').map(uid => uid.trim()).filter(uid => uid !== '');
     if (uids.length === 0) {
       throw new Error('At least one valid email UID is required');
     }

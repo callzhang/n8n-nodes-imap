@@ -1,49 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background with gradient -->
   <defs>
+    <!-- Gradient definitions -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="envelopeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
     </linearGradient>
   </defs>
-  
+
   <!-- Background circle -->
-  <circle cx="30" cy="30" r="28" fill="url(#bgGradient)"/>
-  
+  <circle cx="30" cy="30" r="28" fill="url(#bgGradient)" stroke="#4f46e5" stroke-width="1"/>
+
   <!-- Main envelope -->
-  <path d="M18 22 L30 30 L42 22 L42 38 L18 38 Z" fill="url(#envelopeGradient)" stroke="#e2e8f0" stroke-width="1"/>
-  
+  <path d="M18 24 L30 34 L42 24 L42 38 L18 38 Z" fill="url(#envelopeGradient)" stroke="#e2e8f0" stroke-width="1"/>
+
   <!-- Envelope flap -->
-  <path d="M18 22 L30 30 L42 22" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  
-  <!-- Enhancement gear/settings icon -->
-  <g fill="#14b8a6" transform="translate(35, 15)">
-    <circle cx="0" cy="0" r="3" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
-    <circle cx="0" cy="0" r="1.5" fill="#14b8a6"/>
-    <path d="M-4.5,0 L-3.5,0 M4.5,0 L3.5,0 M0,-4.5 L0,-3.5 M0,4.5 L0,3.5" stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M18 24 L30 34 L42 24" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- Mail content representation -->
+  <rect x="22" y="28" width="16" height="8" rx="2" fill="#e2e8f0" opacity="0.6"/>
+
+  <!-- Text lines -->
+  <g stroke="#94a3b8" stroke-width="1.2" fill="none" opacity="0.7">
+    <line x1="24" y1="30" x2="36" y2="30"/>
+    <line x1="24" y1="32" x2="34" y2="32"/>
+    <line x1="24" y1="34" x2="35" y2="34"/>
   </g>
-  
-  <!-- Custom labels indicator -->
-  <g fill="#f59e0b" transform="translate(15, 15)">
-    <rect x="-2" y="-1" width="4" height="2" rx="0.5"/>
-    <rect x="-1.5" y="-0.5" width="3" height="1" rx="0.25" fill="#ffffff"/>
+
+  <!-- Enhancement stars -->
+  <g fill="#fbbf24" transform="translate(45, 15)">
+    <path d="M0,-3 L0.9,-0.9 L3,0 L0.9,0.9 L0,3 L-0.9,0.9 L-3,0 L-0.9,-0.9 Z"/>
   </g>
-  
-  <!-- Plus sign for additional features -->
-  <g fill="#14b8a6" transform="translate(45, 45)">
-    <rect x="-3" y="-1" width="6" height="2" rx="1"/>
-    <rect x="-1" y="-3" width="2" height="6" rx="1"/>
+
+  <g fill="#fbbf24" transform="translate(15, 15)">
+    <path d="M0,-2 L0.6,-0.6 L2,0 L0.6,0.6 L0,2 L-0.6,0.6 L-2,0 L-0.6,-0.6 Z"/>
   </g>
-  
-  <!-- Mail content lines -->
-  <g stroke="#94a3b8" stroke-width="1" fill="none">
-    <line x1="22" y1="26" x2="38" y2="26"/>
-    <line x1="22" y1="30" x2="35" y2="30"/>
-    <line x1="22" y1="34" x2="36" y2="34"/>
-  </g>
+
+  <!-- Small notification indicator -->
+  <circle cx="46" cy="14" r="2.5" fill="#ef4444" stroke="#ffffff" stroke-width="1"/>
 </svg>

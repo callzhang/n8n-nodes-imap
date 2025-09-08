@@ -4,7 +4,7 @@ import { getAllResourceNodeParameters } from './utils/CommonDefinitions';
 import { ImapCredentialsData } from '../../credentials/ImapCredentials.credentials';
 import { ImapFlowErrorCatcher, NodeImapError, createImapClient } from './utils/ImapUtils';
 import { NodeApiError } from 'n8n-workflow';
-import { loadMailboxList } from './utils/SearchFieldParameters';
+import { loadMailboxList, loadMailboxOptions } from './utils/SearchFieldParameters';
 import { CREDENTIALS_TYPE_CORE_IMAP_ACCOUNT, CREDENTIALS_TYPE_THIS_NODE, credentialNames, getImapCredentials } from './utils/CredentialsSelector';
 
 
@@ -175,7 +175,7 @@ export class ImapEnhanced implements INodeType {
             var errorMessage = error.responseText || error.message || 'Unknown error';
 
             this.logger.error(`Operation "${operation}" for resource "${resource}" failed`);
-            
+
 
             throw new NodeImapError(this.getNode(), errorMessage, imapErrorsList);
           }
@@ -203,6 +203,9 @@ export class ImapEnhanced implements INodeType {
   };
 
   methods = {
+    loadOptions: {
+      loadMailboxOptions: loadMailboxOptions,
+    },
     listSearch: {
       loadMailboxList: loadMailboxList,
     },

@@ -1,10 +1,10 @@
 import { FetchMessageObject, FetchQueryObject, ImapFlow } from "imapflow";
 import { IExecuteFunctions, INodeExecutionData } from "n8n-workflow";
 import { IResourceOperationDef } from "../../../utils/CommonDefinitions";
-import { getMailboxPathFromNodeParameter, parameterSelectMailbox } from "../../../utils/SearchFieldParameters";
+import { getAllMailboxes } from "../../../utils/SearchFieldParameters";
 import { emailSearchParameters, getEmailSearchParametersFromNode } from "../../../utils/EmailSearchParameters";
 import { simpleParser } from 'mailparser';
-import { NodeHtmlMarkdown } from 'node-html-markdown';
+import { htmlToMarkdown, cleanHtml } from "../../../utils/MarkdownConverter";
 
 
 enum EmailParts {
@@ -14,6 +14,7 @@ enum EmailParts {
   AttachmentsInfo = 'attachmentsInfo',
   TextContent = 'textContent',
   HtmlContent = 'htmlContent',
+  MarkdownContent = 'markdownContent',
   Headers = 'headers',
 }
 
@@ -22,58 +23,6 @@ enum EmailParts {
 // Removed unused textToSimplifiedHtml function
 
 
-// Initialize HTML to Markdown converter
-const nhm = new NodeHtmlMarkdown();
-
-function htmlToMarkdown(html: string): string {
-  if (!html) return '';
-  return nhm.translate(html);
-}
-
-function htmlToText(html: string): string {
-  if (!html) return '';
-
-  // Remove script and style elements completely
-  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-
-  // Convert HTML elements to plain text
-  text = text
-    // Convert line breaks
-    .replace(/<br[^>]*>/gi, '\n')
-    // Convert paragraphs
-    .replace(/<p[^>]*>(.*?)<\/p>/gi, '\n\n$1\n\n')
-    // Convert headers
-    .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n$1\n\n')
-    // Convert divs
-    .replace(/<div[^>]*>(.*?)<\/div>/gi, '\n$1\n')
-    // Convert lists
-    .replace(/<ul[^>]*>(.*?)<\/ul>/gi, '\n$1\n')
-    .replace(/<ol[^>]*>(.*?)<\/ol>/gi, '\n$1\n')
-    .replace(/<li[^>]*>(.*?)<\/li>/gi, '• $1\n')
-    // Convert blockquotes
-    .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '\n> $1\n')
-    // Convert links to plain text with URL
-    .replace(/<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/gi, '$2 ($1)')
-    // Remove all remaining HTML tags
-    .replace(/<[^>]*>/g, '')
-    // Decode HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    // Clean up whitespace
-    .replace(/\n\s*\n\s*\n/g, '\n\n') // Multiple line breaks to double
-    .replace(/^\s+|\s+$/g, '') // Trim start and end
-    .replace(/[ \t]+/g, ' ') // Multiple spaces to single space
-    .replace(/\n /g, '\n') // Remove leading spaces from lines
-    .replace(/ \n/g, '\n'); // Remove trailing spaces from lines
-
-  return text.trim();
-}
 
 
 export const getEmailsListOperation: IResourceOperationDef = {
@@ -83,8 +32,25 @@ export const getEmailsListOperation: IResourceOperationDef = {
   },
   parameters: [
     {
-      ...parameterSelectMailbox,
-      description: 'Select the mailbox',
+      displayName: 'Mailbox Names or IDs',
+      name: 'mailboxes',
+      type: 'multiOptions',
+      default: ['ALL'],
+      description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+      typeOptions: {
+        loadOptionsMethod: 'loadMailboxOptions',
+      },
+      options: [
+        {
+          name: 'ALL',
+          value: 'ALL',
+          description: 'Search all available mailboxes',
+        },
+        {
+          name: 'INBOX',
+          value: 'INBOX',
+        },
+      ],
     },
     ...emailSearchParameters,
     //
@@ -102,6 +68,10 @@ export const getEmailsListOperation: IResourceOperationDef = {
         {
           name: 'HTML Content',
           value: EmailParts.HtmlContent,
+        },
+        {
+          name: 'Markdown Content',
+          value: EmailParts.MarkdownContent,
         },
         {
           name: 'Attachments Info',
@@ -168,23 +138,27 @@ export const getEmailsListOperation: IResourceOperationDef = {
       description: 'Max number of results to return',
       placeholder: '100',
     },
-    {
-      displayName: 'Include Body',
-      name: 'enhancedFields',
-      type: 'boolean',
-      default: true,
-      description: 'Whether to include email body content in the results',
-      hint: 'Returns text, markdown, and html fields with email body content',
-    }
   ],
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
     var returnData: INodeExecutionData[] = [];
 
-    const mailboxPath = getMailboxPathFromNodeParameter(context, itemIndex);
+    // Get mailbox selection parameter
+    const selectedMailboxes = context.getNodeParameter('mailboxes', itemIndex) as string[];
 
-    context.logger?.info(`Getting emails list from ${mailboxPath}`);
+    // Determine which mailboxes to search
+    let mailboxesToSearch: string[];
+    if (selectedMailboxes.includes('ALL')) {
+      // Search all available mailboxes
+      mailboxesToSearch = await getAllMailboxes(context, client);
+    } else if (selectedMailboxes.length === 0) {
+      // Fallback to INBOX if no mailboxes selected
+      mailboxesToSearch = ['INBOX'];
+    } else {
+      // Use selected mailboxes (filter out 'ALL' if present)
+      mailboxesToSearch = selectedMailboxes.filter(mailbox => mailbox !== 'ALL');
+    }
 
-    await client.mailboxOpen(mailboxPath);
+    context.logger?.info(`Searching in ${mailboxesToSearch.length} mailbox(es): ${mailboxesToSearch.join(', ')}`);
 
     var searchObject = getEmailSearchParametersFromNode(context, itemIndex);
 
@@ -222,10 +196,11 @@ export const getEmailsListOperation: IResourceOperationDef = {
     if (includeAttachmentsInfo) {
       fetchQuery.bodyStructure = true;
     }
-    // text Content and html Content
+    // text Content, html Content, and markdown Content
     const includeTextContent = includeParts.includes(EmailParts.TextContent);
     const includeHtmlContent = includeParts.includes(EmailParts.HtmlContent);
-    if (includeTextContent || includeHtmlContent) {
+    const includeMarkdownContent = includeParts.includes(EmailParts.MarkdownContent);
+    if (includeTextContent || includeHtmlContent || includeMarkdownContent) {
       // will parse the bodystructure to get the parts IDs for text and html
       fetchQuery.bodyStructure = true;
     }
@@ -234,11 +209,8 @@ export const getEmailsListOperation: IResourceOperationDef = {
     context.logger?.debug(`Search object: ${JSON.stringify(searchObject)}`);
     context.logger?.debug(`Fetch query: ${JSON.stringify(fetchQuery)}`);
 
-    // get enhanced fields parameter
-    const enhancedFields = context.getNodeParameter('enhancedFields', itemIndex) as boolean;
-
-    // if enhanced fields are enabled, fetch source for better content extraction
-    if (enhancedFields) {
+    // if any content parts are requested, fetch source for better content extraction
+    if (includeTextContent || includeHtmlContent || includeMarkdownContent) {
       fetchQuery.source = true; // Use source instead of bodyStructure for better performance
     }
 
@@ -249,17 +221,41 @@ export const getEmailsListOperation: IResourceOperationDef = {
     // because we might need to fetch the body parts for each email,
     // and this will freeze the client if we do it in parallel
     const emailsList: FetchMessageObject[] = [];
-    let count = 0;
-    for  await (let email of client.fetch(searchObject, fetchQuery)) {
-      emailsList.push(email);
-      count++;
-      // apply limit if specified
-      if (limit > 0 && count >= limit) {
-        context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
-        break;
+    let totalCount = 0;
+    let limitReached = false;
+
+    // Iterate through each mailbox
+    for (const mailboxPath of mailboxesToSearch) {
+      if (limitReached) break;
+
+      try {
+        context.logger?.info(`Opening mailbox: ${mailboxPath}`);
+        await client.mailboxOpen(mailboxPath, { readOnly: true });
+
+        let mailboxCount = 0;
+        for await (let email of client.fetch(searchObject, fetchQuery)) {
+          // Add mailbox information to the email object
+          (email as any).mailboxPath = mailboxPath;
+          emailsList.push(email);
+          totalCount++;
+          mailboxCount++;
+
+          // apply limit if specified
+          if (limit > 0 && totalCount >= limit) {
+            context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
+            limitReached = true;
+            break;
+          }
+        }
+
+        context.logger?.info(`Found ${mailboxCount} emails in ${mailboxPath}`);
+      } catch (error) {
+        context.logger?.warn(`Failed to search mailbox ${mailboxPath}: ${(error as Error).message}`);
+        // Continue with next mailbox
       }
     }
-    context.logger?.info(`Found ${emailsList.length} emails`);
+
+    context.logger?.info(`Found ${emailsList.length} total emails across ${mailboxesToSearch.length} mailbox(es)`);
 
     // process the emails
     for (const email of emailsList) {
@@ -269,7 +265,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
       // Always include basic email info
       item_json.seq = email.seq;
       item_json.uid = email.uid;
-      item_json.mailboxPath = mailboxPath;
+      item_json.mailboxPath = (email as any).mailboxPath; // Include mailbox path from the email object
 
       // Always include envelope data
       if (email.envelope) {
@@ -286,69 +282,69 @@ export const getEmailsListOperation: IResourceOperationDef = {
         item_json.size = email.size;
       }
 
-      // If enhanced fields are enabled and we have source, parse it directly
-      if (enhancedFields && email.source) {
+      // Process content parts if requested
+      if ((includeTextContent || includeHtmlContent || includeMarkdownContent) && email.source) {
         context.logger?.debug(`Parsing email source for UID ${email.uid}...`);
         try {
           const parsed = await simpleParser(email.source);
 
-          // Create envelope-like structure from parsed data if not available
-          if (!item_json.envelope) {
-            item_json.envelope = {
-              subject: parsed.subject || '',
-              from: parsed.from ? [{ address: (parsed.from as any).value?.[0]?.address || '', name: (parsed.from as any).value?.[0]?.name || '' }] : [],
-              to: parsed.to ? (parsed.to as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
-              cc: parsed.cc ? (parsed.cc as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
-              bcc: parsed.bcc ? (parsed.bcc as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
-              replyTo: parsed.replyTo ? (parsed.replyTo as any).value?.map((addr: any) => ({ address: addr.address || '', name: addr.name || '' })) || [] : [],
-              date: parsed.date || new Date(),
-              messageId: parsed.messageId || '',
-              inReplyTo: parsed.inReplyTo || ''
-            };
-          }
-
-          // Set flags to empty array if not available
-          if (!item_json.labels) {
-            item_json.labels = [];
-          }
-
-          // Set size from source if not available
-          if (!item_json.size) {
-            item_json.size = email.source.length;
-          }
-
-          // Extract body content directly from parsed data
-          if (parsed.text) {
-            item_json.text = parsed.text;
-            item_json.markdown = parsed.text; // Plain text is already readable
-          } else {
-            item_json.text = '';
-            item_json.markdown = '';
-          }
-
-          if (parsed.html) {
-            item_json.html = parsed.html;
-            item_json.markdown = htmlToMarkdown(parsed.html);
-            // If we don't have text content, create plain text from HTML
-            if (!item_json.text) {
-              item_json.text = htmlToText(parsed.html);
+          // Extract text content if requested
+          if (includeTextContent) {
+            if (parsed.text) {
+              item_json.textContent = parsed.text;
+            } else if (parsed.html) {
+              // Generate text from HTML if no plain text available
+              const cleanedHtml = cleanHtml(parsed.html);
+              item_json.textContent = htmlToText(cleanedHtml);
+            } else {
+              item_json.textContent = '';
             }
-          } else {
-            item_json.html = '';
           }
 
-          // Ensure we have all three formats
-          if (!item_json.text) item_json.text = '';
-          if (!item_json.markdown) item_json.markdown = '';
-          if (!item_json.html) item_json.html = '';
+          // Extract HTML content if requested
+          if (includeHtmlContent) {
+            if (parsed.html) {
+              const originalHtmlSize = parsed.html.length;
+              const originalHtmlSizeKB = originalHtmlSize / 1024;
+
+              // Clean HTML by default for better readability
+              const cleanedHtml = cleanHtml(parsed.html);
+              const cleanedHtmlSize = cleanedHtml.length;
+              const htmlReduction = ((originalHtmlSize - cleanedHtmlSize) / originalHtmlSize) * 100;
+
+              item_json.htmlContent = cleanedHtml;
+              item_json.htmlCleaned = true;
+              item_json.htmlOriginalSizeKB = originalHtmlSizeKB;
+              item_json.htmlCleanedSizeKB = cleanedHtmlSize / 1024;
+
+              if (htmlReduction > 0) {
+                context.logger?.debug(`Email ${email.uid}: HTML cleaned, size reduced by ${htmlReduction.toFixed(1)}% (${(originalHtmlSize/1024).toFixed(1)}KB → ${(cleanedHtmlSize/1024).toFixed(1)}KB)`);
+              }
+            } else {
+              item_json.htmlContent = '';
+            }
+          }
+
+          // Extract markdown content if requested
+          if (includeMarkdownContent) {
+            if (parsed.html) {
+              const cleanedHtml = cleanHtml(parsed.html);
+              item_json.markdownContent = htmlToMarkdown(cleanedHtml);
+            } else if (parsed.text) {
+              // If no HTML, use plain text as markdown
+              item_json.markdownContent = parsed.text;
+            } else {
+              item_json.markdownContent = '';
+            }
+          }
 
           context.logger?.debug(`Email source parsing successful for UID ${email.uid}`);
         } catch (error) {
           context.logger?.warn(`Failed to parse email source for UID ${email.uid}: ${error.message}`);
           // Set empty values as fallback
-          item_json.text = '';
-          item_json.markdown = '';
-          item_json.html = '';
+          if (includeTextContent) item_json.textContent = '';
+          if (includeHtmlContent) item_json.htmlContent = '';
+          if (includeMarkdownContent) item_json.markdownContent = '';
         }
       }
 

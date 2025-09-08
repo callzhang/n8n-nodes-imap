@@ -1,31 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background circle -->
-  <circle cx="30" cy="30" r="28" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
-  
-  <!-- Main envelope body (medium blue) -->
-  <path d="M18 25 L30 35 L42 25 L42 40 L18 40 Z" fill="#3b82f6" stroke="#ffffff" stroke-width="1"/>
-  
-  <!-- Envelope flap (open, medium blue) -->
-  <path d="M18 25 L30 35 L42 25" fill="#3b82f6" stroke="#ffffff" stroke-width="1"/>
-  
-  <!-- Inner content/letter (teal rectangle with rounded top corners) -->
-  <rect x="22" y="28" width="16" height="10" rx="3" ry="3" fill="#14b8a6" stroke="#ffffff" stroke-width="0.5"/>
-  
-  <!-- Plus sign (teal with white outline) -->
-  <g>
-    <!-- White outline for plus sign -->
-    <rect x="27" y="31" width="8" height="2" rx="1" fill="#ffffff"/>
-    <rect x="30" y="28" width="2" height="8" rx="1" fill="#ffffff"/>
-    
-    <!-- Teal plus sign on top -->
-    <rect x="27.5" y="31.5" width="7" height="1" rx="0.5" fill="#14b8a6"/>
-    <rect x="30.5" y="28.5" width="1" height="7" rx="0.5" fill="#14b8a6"/>
+  <defs>
+    <!-- Gradient definitions -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="envelopeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle with subtle shadow -->
+  <circle cx="30" cy="30" r="28" fill="url(#bgGradient)" stroke="#1e40af" stroke-width="1"/>
+
+  <!-- Main envelope body -->
+  <path d="M16 22 L30 32 L44 22 L44 40 L16 40 Z" fill="url(#envelopeGradient)" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Envelope flap (open) -->
+  <path d="M16 22 L30 32 L44 22" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- Envelope fold lines -->
+  <g stroke="#cbd5e1" stroke-width="1" fill="none" opacity="0.6">
+    <line x1="16" y1="40" x2="30" y2="32"/>
+    <line x1="44" y1="40" x2="30" y2="32"/>
   </g>
-  
-  <!-- Envelope fold lines (white) -->
-  <g stroke="#ffffff" stroke-width="0.8" fill="none">
-    <line x1="18" y1="40" x2="30" y2="35"/>
-    <line x1="42" y1="40" x2="30" y2="35"/>
+
+  <!-- Mail content lines -->
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" opacity="0.8">
+    <line x1="20" y1="26" x2="40" y2="26"/>
+    <line x1="20" y1="30" x2="37" y2="30"/>
+    <line x1="20" y1="34" x2="38" y2="34"/>
   </g>
+
+  <!-- Enhancement indicator - small gear icon -->
+  <g fill="url(#accentGradient)" transform="translate(42, 18)">
+    <circle cx="0" cy="0" r="4" fill="none" stroke="url(#accentGradient)" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="1.5" fill="url(#accentGradient)"/>
+    <path d="M-5.5,0 L-4.5,0 M5.5,0 L4.5,0 M0,-5.5 L0,-4.5 M0,5.5 L0,4.5"
+          stroke="url(#accentGradient)" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Plus sign for enhanced features -->
+  <g fill="url(#accentGradient)" transform="translate(18, 18)">
+    <rect x="-2.5" y="-1" width="5" height="2" rx="1"/>
+    <rect x="-1" y="-2.5" width="2" height="5" rx="1"/>
+  </g>
+
+  <!-- Small notification dot -->
+  <circle cx="46" cy="14" r="3" fill="#ef4444" stroke="#ffffff" stroke-width="1"/>
 </svg>
