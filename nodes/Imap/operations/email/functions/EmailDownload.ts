@@ -3,82 +3,10 @@ import { IBinaryKeyData, IDataObject, IExecuteFunctions, INodeExecutionData } fr
 import { IResourceOperationDef } from "../../../utils/CommonDefinitions";
 import { getMailboxPathFromNodeParameter, parameterSelectMailbox } from "../../../utils/SearchFieldParameters";
 import { simpleParser } from 'mailparser';
-import { htmlToMarkdown, cleanHtml } from "../../../utils/MarkdownConverter";
+import { htmlToMarkdown, cleanHtml, htmlToText } from "../../../utils/MarkdownConverter";
 
 
 
-function htmlToText(html: string): string {
-  if (!html) return '';
-
-  // Remove script and style elements completely
-  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-
-  // Convert HTML elements to plain text
-  text = text
-    // Convert line breaks
-    .replace(/<br[^>]*>/gi, '\n')
-    // Convert paragraphs
-    .replace(/<p[^>]*>(.*?)<\/p>/gi, '\n\n$1\n\n')
-    // Convert headers
-    .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n$1\n\n')
-    // Convert divs
-    .replace(/<div[^>]*>(.*?)<\/div>/gi, '\n$1\n')
-    // Convert lists
-    .replace(/<ul[^>]*>(.*?)<\/ul>/gi, '\n$1\n')
-    .replace(/<ol[^>]*>(.*?)<\/ol>/gi, '\n$1\n')
-    .replace(/<li[^>]*>(.*?)<\/li>/gi, '• $1\n')
-    // Convert blockquotes
-    .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '\n> $1\n')
-    // Convert links to plain text with URL (handle long URLs)
-    .replace(/<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/gi, (match, url, text) => {
-      try {
-        const decodedUrl = decodeURIComponent(url);
-        if (url.includes('%') && url.length > 200) {
-          return text; // Just show the text for URLs with excessive byte code
-        }
-        if (decodedUrl.length > 500) {
-          return text; // Just show the text for very long URLs
-        }
-        return `${text} (${url})`;
-      } catch (e) {
-        return text; // If decoding fails, just show the text
-      }
-    })
-    // Remove all remaining HTML tags
-    .replace(/<[^>]*>/g, '')
-    // Decode HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    // Handle plain URLs in text (not in HTML links)
-    .replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
-      try {
-        const decodedUrl = decodeURIComponent(url);
-        if (url.includes('%') && url.length > 200) {
-          return '[Long URL]';
-        }
-        if (decodedUrl.length > 500) {
-          return '[Long URL]';
-        }
-        return match;
-      } catch (e) {
-        return '[Long URL]';
-      }
-    })
-    // Clean up whitespace
-    .replace(/\n\s*\n\s*\n/g, '\n\n') // Multiple line breaks to double
-    .replace(/^\s+|\s+$/g, '') // Trim start and end
-    .replace(/[ \t]+/g, ' ') // Multiple spaces to single space
-    .replace(/\n /g, '\n') // Remove leading spaces from lines
-    .replace(/ \n/g, '\n'); // Remove trailing spaces from lines
-
-  return text.trim();
-}
 
 export const downloadOperation: IResourceOperationDef = {
   operation: {

@@ -4,7 +4,7 @@ import { IResourceOperationDef } from "../../../utils/CommonDefinitions";
 import { getAllMailboxes } from "../../../utils/SearchFieldParameters";
 import { emailSearchParameters, getEmailSearchParametersFromNode } from "../../../utils/EmailSearchParameters";
 import { simpleParser } from 'mailparser';
-import { htmlToMarkdown, cleanHtml } from "../../../utils/MarkdownConverter";
+import { htmlToMarkdown, cleanHtml, htmlToText } from "../../../utils/MarkdownConverter";
 
 
 enum EmailParts {
