@@ -1,4 +1,6 @@
 import { NodeHtmlMarkdown } from 'node-html-markdown';
+// Note: You would need to install: npm install extract-json-from-string
+// import extractJson from 'extract-json-from-string';
 
 /**
  * Convert HTML to clean markdown for DingTalk
@@ -255,4 +257,136 @@ export function htmlToText(html: string): string {
     .replace(/ \n/g, '\n'); // Remove trailing spaces from lines
 
   return text.trim();
+}
+
+/**
+ * Extract JSON from mixed content that may contain markdown code blocks
+ * Handles cases where content starts with ```json but contains mixed data
+ */
+export function extractJsonFromMixedContent(content: string): { json: any; remainingContent: string } | null {
+  if (!content) return null;
+
+  try {
+    // First, try to parse the entire content as JSON
+    const parsed = JSON.parse(content);
+    return { json: parsed, remainingContent: '' };
+  } catch (e) {
+    // If direct parsing fails, try to extract JSON from markdown code blocks
+    const jsonBlockMatch = content.match(/```json\s*\n?([\s\S]*?)\n?```/);
+    if (jsonBlockMatch) {
+      try {
+        const jsonContent = jsonBlockMatch[1].trim();
+        const parsed = JSON.parse(jsonContent);
+        const remainingContent = content.replace(jsonBlockMatch[0], '').trim();
+        return { json: parsed, remainingContent };
+      } catch (e) {
+        // JSON block exists but is malformed
+        return null;
+      }
+    }
+
+    // Try to find JSON at the beginning of the content
+    const lines = content.split('\n');
+    let jsonLines: string[] = [];
+    let jsonEndIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines at the beginning
+      if (jsonLines.length === 0 && !line) continue;
+
+      // If we find a line that looks like it could be JSON
+      if (line.startsWith('{') || line.startsWith('[') || jsonLines.length > 0) {
+        jsonLines.push(line);
+
+        // Try to parse what we have so far
+        try {
+          const jsonString = jsonLines.join('\n');
+          JSON.parse(jsonString);
+          jsonEndIndex = i;
+          break;
+        } catch (e) {
+          // Continue collecting lines
+        }
+      } else if (jsonLines.length > 0) {
+        // We were collecting JSON but hit a non-JSON line
+        break;
+      }
+    }
+
+    if (jsonEndIndex >= 0) {
+      try {
+        const jsonString = jsonLines.join('\n');
+        const parsed = JSON.parse(jsonString);
+        const remainingContent = lines.slice(jsonEndIndex + 1).join('\n').trim();
+        return { json: parsed, remainingContent };
+      } catch (e) {
+        // JSON extraction failed
+        return null;
+      }
+    }
+
+    return null;
+  }
+}
+
+/**
+ * Clean and validate extracted JSON data
+ * Removes excessive whitespace and validates structure
+ */
+export function cleanExtractedJson(jsonData: any): any {
+  if (!jsonData || typeof jsonData !== 'object') {
+    return jsonData;
+  }
+
+  // Recursively clean the JSON object
+  const cleanObject = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(cleanObject);
+    } else if (obj && typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Clean the key
+        const cleanKey = key.trim();
+        if (cleanKey) {
+          cleaned[cleanKey] = cleanObject(value);
+        }
+      }
+      return cleaned;
+    } else if (typeof obj === 'string') {
+      // Clean string values - remove excessive whitespace
+      return obj.replace(/\s+/g, ' ').trim();
+    }
+    return obj;
+  };
+
+  return cleanObject(jsonData);
+}
+
+/**
+ * Alternative implementation using extract-json-from-string package
+ * Uncomment the import at the top and use this function instead of extractJsonFromMixedContent
+ */
+export function extractJsonWithPackage(content: string): { json: any; remainingContent: string } | null {
+  // Uncomment when package is installed:
+  // try {
+  //   const extracted = extractJson(content);
+  //   if (extracted && typeof extracted === 'object') {
+  //     // Find where the JSON ends in the original content
+  //     const jsonString = JSON.stringify(extracted);
+  //     const jsonIndex = content.indexOf(jsonString);
+  //     const remainingContent = jsonIndex >= 0
+  //       ? content.substring(jsonIndex + jsonString.length).trim()
+  //       : content.replace(jsonString, '').trim();
+  //
+  //     return { json: extracted, remainingContent };
+  //   }
+  //   return null;
+  // } catch (e) {
+  //   return null;
+  // }
+
+  // Fallback to our custom implementation
+  return extractJsonFromMixedContent(content);
 }
