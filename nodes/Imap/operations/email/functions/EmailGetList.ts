@@ -282,19 +282,20 @@ export const getEmailsListOperation: IResourceOperationDef = {
         item_json.size = email.size;
       }
 
-      // Process content parts if requested
-      if ((includeTextContent || includeHtmlContent || includeMarkdownContent) && email.source) {
+      // Process content parts if requested - OPTIMIZED: Parse once, extract all content types
+      let parsedEmail: any = null;
+      if ((includeTextContent || includeHtmlContent || includeMarkdownContent || includeAttachmentsInfo) && email.source) {
         context.logger?.debug(`Parsing email source for UID ${email.uid}...`);
         try {
-          const parsed = await simpleParser(email.source);
+          parsedEmail = await simpleParser(email.source);
 
           // Extract text content if requested
           if (includeTextContent) {
-            if (parsed.text) {
-              item_json.textContent = parsed.text;
-            } else if (parsed.html) {
+            if (parsedEmail.text) {
+              item_json.textContent = parsedEmail.text;
+            } else if (parsedEmail.html) {
               // Generate text from HTML if no plain text available
-              const cleanedHtml = cleanHtml(parsed.html);
+              const cleanedHtml = cleanHtml(parsedEmail.html);
               item_json.textContent = htmlToText(cleanedHtml);
             } else {
               item_json.textContent = '';
@@ -303,12 +304,12 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
           // Extract HTML content if requested
           if (includeHtmlContent) {
-            if (parsed.html) {
-              const originalHtmlSize = parsed.html.length;
+            if (parsedEmail.html) {
+              const originalHtmlSize = parsedEmail.html.length;
               const originalHtmlSizeKB = originalHtmlSize / 1024;
 
               // Clean HTML by default for better readability
-              const cleanedHtml = cleanHtml(parsed.html);
+              const cleanedHtml = cleanHtml(parsedEmail.html);
               const cleanedHtmlSize = cleanedHtml.length;
               const htmlReduction = ((originalHtmlSize - cleanedHtmlSize) / originalHtmlSize) * 100;
 
@@ -327,12 +328,12 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
           // Extract markdown content if requested
           if (includeMarkdownContent) {
-            if (parsed.html) {
-              const cleanedHtml = cleanHtml(parsed.html);
+            if (parsedEmail.html) {
+              const cleanedHtml = cleanHtml(parsedEmail.html);
               item_json.markdownContent = htmlToMarkdown(cleanedHtml);
-            } else if (parsed.text) {
+            } else if (parsedEmail.text) {
               // If no HTML, use plain text as markdown
-              item_json.markdownContent = parsed.text;
+              item_json.markdownContent = parsedEmail.text;
             } else {
               item_json.markdownContent = '';
             }
@@ -368,12 +369,12 @@ export const getEmailsListOperation: IResourceOperationDef = {
       }
 
 
-      // Handle attachment info if requested (simplified approach)
-      if (includeAttachmentsInfo && email.source) {
+      // Handle attachment info if requested - OPTIMIZED: Reuse parsed email data
+      if (includeAttachmentsInfo) {
         try {
-          const parsed = await simpleParser(email.source);
-          if (parsed.attachments && parsed.attachments.length > 0) {
-            item_json.attachmentsInfo = parsed.attachments.map((attachment, index) => ({
+          const emailData = parsedEmail || (email.source ? await simpleParser(email.source) : null);
+          if (emailData?.attachments && emailData.attachments.length > 0) {
+            item_json.attachmentsInfo = emailData.attachments.map((attachment: any, index: number) => ({
               index: index,
               filename: attachment.filename || `attachment_${index}`,
               contentType: attachment.contentType || 'application/octet-stream',
