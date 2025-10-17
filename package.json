@@ -25,7 +25,15 @@
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "test": "cd tests && npm test",
+    "test:unit": "cd tests && npm run test:unit",
+    "test:integration": "cd tests && npm run test:integration",
+    "test:coverage": "cd tests && npm run test:coverage",
+    "test:watch": "cd tests && npm run test:watch",
+    "test:ci": "cd tests && npm run test:ci",
+    "test:debug": "cd tests && npm run test:debug",
+    "test:run": "./tests/run-tests.sh"
   },
   "files": [
     "dist"
