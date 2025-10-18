@@ -111,62 +111,12 @@ export const parameterSelectMailbox: INodeProperties  = {
 
 
 /**
- * Decode UTF-7 encoded mailbox names and handle known encoding issues
+ * Simple mailbox path handler - no encoding/decoding needed
+ * Modern IMAP servers support UTF-8 directly
  */
-function decodeMailboxPath(str: string): string {
-  // If the string doesn't contain UTF-7 encoding markers, return as-is
-  if (!str.includes('&') || !str.includes('-')) {
-    return str;
-  }
-
-  // Known problematic encodings and their correct mailbox names
-  const knownEncodings: { [key: string]: string } = {
-    '&V4NXPpCuTvY-': '垃圾邮件',
-    '&V4RlcJCuTvY-': '发票', // This might be wrong, but let's try it
-    // Add more as we discover them
-  };
-
-  // Check if this is a known problematic encoding
-  if (knownEncodings[str]) {
-    return knownEncodings[str];
-  }
-
-  // Try standard UTF-7 decoding as fallback
-  try {
-    // Replace &- with empty string (represents &)
-    str = str.replace(/&-/g, '&');
-
-    // Find all &...- patterns and decode them
-    return str.replace(/&([A-Za-z0-9+,/]+)-/g, function(match, encoded) {
-      try {
-        // Convert base64-like encoding to bytes
-        let binary = '';
-        for (let i = 0; i < encoded.length; i++) {
-          const char = encoded[i];
-          if (char === ',') {
-            binary += '/';
-          } else if (char === '+') {
-            binary += '+';
-          } else {
-            binary += char;
-          }
-        }
-
-        // Pad the string to make it valid base64
-        while (binary.length % 4) {
-          binary += '=';
-        }
-
-        // Decode base64 to UTF-16 bytes, then to string
-        const bytes = Buffer.from(binary, 'base64');
-        return bytes.toString('utf16le');
-      } catch (e) {
-        return match; // Return original if decoding fails
-      }
-    });
-  } catch (error) {
-    return str; // Return original if any error occurs
-  }
+function getMailboxPath(mailboxPath: string): string {
+  // Return the mailbox path as-is - modern servers handle UTF-8 directly
+  return mailboxPath;
 }
 
 export function getMailboxPathFromNodeParameter(context: IExecuteFunctions, itemIndex: number,  paramName:string = DEFAULT_MAILBOX_PARAMETER_NAME): string {
@@ -182,8 +132,8 @@ export function getMailboxPathFromNodeParameter(context: IExecuteFunctions, item
     }
     const mailboxPath = mailboxPathObj['value'] as string;
 
-    // Decode any UTF-7 encoding issues
-    return decodeMailboxPath(mailboxPath);
+    // Use simple path handler - no encoding/decoding needed
+    return getMailboxPath(mailboxPath);
   } catch (error) {
     return '';
   }

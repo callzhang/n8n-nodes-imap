@@ -200,6 +200,7 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
   async executeImapAction(context: IExecuteFunctions, itemIndex: number, client: ImapFlow): Promise<INodeExecutionData[] | null> {
     var returnData: INodeExecutionData[] = [];
 
+    // Get mailbox path - no encoding/decoding needed for modern servers
     const mailboxPath = getMailboxPathFromNodeParameter(context, itemIndex);
     const emailUid = String(context.getNodeParameter('emailUid', itemIndex) || '');
     const flags = context.getNodeParameter('flags', itemIndex) as unknown as { [key: string]: boolean };
@@ -279,7 +280,9 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
     try {
       await client.mailboxOpen(mailboxPath, { readOnly: false });
     } catch (error) {
-      throw new Error(`Failed to open mailbox ${mailboxPath}: ${(error as Error).message}`);
+      const errorMessage = (error as Error).message;
+      context.logger?.error(`Failed to open mailbox "${mailboxPath}": ${errorMessage}`);
+      throw new Error(`Failed to open mailbox "${mailboxPath}": ${errorMessage}`);
     }
 
     // Handle "set" action for custom labels - need to replace all custom labels

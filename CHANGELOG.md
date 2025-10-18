@@ -1,18 +1,19 @@
-## [2.15.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.2...v2.15.3) (2025-01-09)
+## [2.16.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.3...v2.16.0) (2025-01-17)
 
-### Critical Bug Fix
+### Major Simplification
 
-* **Fixed Mailbox Encoding Issue**: Resolved "SELECT failed" and "COPY failed" errors when moving emails to Chinese mailboxes
-* **UTF-7 Encoding Handling**: Added proper decoding for UTF-7 encoded mailbox names like `&V4NXPpCuTvY-`
-* **Known Encoding Mapping**: Implemented mapping for known problematic encodings to correct mailbox names
-* **Move Operation Fix**: Move operation now works correctly with Chinese mailbox names
+* **Removed UTF-7 Encoding Complexity**: Eliminated all UTF-7 encoding/decoding logic from the codebase
+* **Modern UTF-8 Support**: Now uses UTF-8 directly for all mailbox names - no encoding needed
+* **Simplified Codebase**: Removed hundreds of lines of complex UTF-7 decoding functions
+* **Better Performance**: No more encoding/decoding overhead for mailbox operations
+* **Cleaner Code**: Much simpler and more maintainable mailbox path handling
 
 ### Technical Details
 
-* **Root Cause**: n8n was passing UTF-7 encoded mailbox names (`&V4NXPpCuTvY-`) instead of actual names (`垃圾邮件`)
-* **Solution**: Added `decodeMailboxPath` function with known encoding mappings and UTF-7 fallback
-* **Error Prevention**: Prevents "SELECT failed" and "COPY failed" errors when using Chinese mailboxes
-* **Backward Compatibility**: Normal mailbox names (INBOX, etc.) continue to work without changes
+* **Modern Approach**: Modern IMAP servers support UTF-8 directly via RFC 6855 (UTF8=ACCEPT capability)
+* **Simplified Functions**: Replaced complex UTF-7 decoders with simple path handlers
+* **Universal Support**: Works with all languages and characters without encoding issues
+* **Future-Proof**: Follows modern IMAP standards and best practices
 
 ## [2.15.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.1...v2.15.2) (2025-01-09)
 
