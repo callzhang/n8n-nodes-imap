@@ -1,3 +1,18 @@
+## [2.17.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.0...v2.17.1) (2025-10-18)
+
+### Critical Bug Fix
+
+* **Fixed UTF-7 Encoding Issue**: Corrected the dist folder to use the simplified UTF-8 approach
+* **Resolved Chinese Mailbox Names**: Fixed issue where Chinese mailbox names were being UTF-7 encoded instead of using direct UTF-8
+* **Updated Build Process**: Ensured dist folder matches the current source code with UTF-8 support
+* **Fixed Move/Copy Operations**: Resolved "COPY failed" errors when working with Chinese mailbox names
+
+### Technical Details
+
+* **Build Synchronization**: Dist folder now properly reflects the simplified UTF-8 source code
+* **Mailbox Path Handling**: Direct UTF-8 support for all mailbox operations
+* **Error Resolution**: Fixed IMAP server errors when working with international mailbox names
+
 ## [2.17.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.16.1...v2.17.0) (2025-10-17)
 
 ### Enhanced Node Icons and Testing
