@@ -233,26 +233,48 @@ export const getEmailsListOperation: IResourceOperationDef = {
         await client.mailboxOpen(mailboxPath, { readOnly: true });
 
         let mailboxCount = 0;
+
+        // Check if we have any search criteria
+        const hasSearchCriteria = Object.keys(searchObject).length > 0;
         
-        // First, search for emails using the search object
-        const searchResults = await client.search(searchObject);
+        let searchResults: number[] | false;
         
-        if (!searchResults) {
-          context.logger?.info(`No emails found in ${mailboxPath}`);
-          continue;
+        if (hasSearchCriteria) {
+          // First, search for emails using the search object
+          context.logger?.info(`Searching with criteria: ${JSON.stringify(searchObject)}`);
+          searchResults = await client.search(searchObject);
+          
+          if (!searchResults) {
+            context.logger?.info(`Search returned no results in ${mailboxPath}`);
+            continue;
+          }
+          
+          context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
+          
+          if (searchResults.length === 0) {
+            context.logger?.info(`No emails found matching criteria in ${mailboxPath}`);
+            continue;
+          }
+        } else {
+          // No search criteria provided, fetch all emails
+          context.logger?.info(`No search criteria provided, fetching all emails from ${mailboxPath}`);
+          
+          // Get all email UIDs by fetching with minimal query
+          const allEmails: number[] = [];
+          for await (const email of client.fetch({}, { uid: true })) {
+            if (email.uid) {
+              allEmails.push(email.uid);
+            }
+          }
+          
+          searchResults = allEmails;
+          context.logger?.info(`Found ${searchResults.length} total emails in ${mailboxPath}`);
         }
-        
-        context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
-        
-        if (searchResults.length === 0) {
-          context.logger?.info(`No emails found in ${mailboxPath}`);
-          continue;
-        }
-        
+
         // Then fetch the email data for the found UIDs
         for (const uid of searchResults) {
           if (limitReached) break;
-          
+
           try {
             const email = await client.fetchOne(uid, fetchQuery, { uid: true });
             if (email) {

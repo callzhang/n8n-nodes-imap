@@ -1,3 +1,20 @@
+## [2.17.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.2...v2.17.3) (2025-10-18)
+
+### Critical Search Bug Fix
+
+* **Fixed Empty Search Object Issue**: Resolved the fundamental search bug where empty search objects caused failures
+* **Fallback to Fetch All**: When no search criteria are provided, now fetches all emails instead of failing
+* **Improved Error Handling**: Better handling of IMAP server limitations with search functionality
+* **Enhanced Logging**: Added detailed logging to distinguish between search and fetch operations
+* **Server Compatibility**: Works with IMAP servers that have search limitations
+
+### Technical Details
+
+* **Search Detection**: Added logic to detect when search criteria are provided vs. empty
+* **Dual Approach**: Uses `client.search()` for criteria-based searches, `client.fetch()` for all emails
+* **UID Collection**: Properly collects UIDs from fetch operations for subsequent email retrieval
+* **Backward Compatibility**: Maintains existing search functionality while adding fallback
+
 ## [2.17.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.1...v2.17.2) (2025-10-18)
 
 ### Critical Search Fix
