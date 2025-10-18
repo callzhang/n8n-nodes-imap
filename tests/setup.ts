@@ -5,6 +5,7 @@
  * for the IMAP Enhanced Node test suite.
  */
 
+import { jest } from '@jest/globals';
 import { IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
 
 // Mock IMAP credentials for testing

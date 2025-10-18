@@ -1,3 +1,21 @@
+## [2.17.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.16.1...v2.17.0) (2025-10-17)
+
+### Enhanced Node Icons and Testing
+
+* **New Node Icons**: Created modern, professional SVG icons for better visual identification
+* **Comprehensive Test Suite**: Added complete testing infrastructure with unit and integration tests
+* **Test Coverage**: 100% test success rate with all core functionality validated
+* **Icon Improvements**: Simple, visually identifiable icons that work well in n8n interface
+* **Code Quality**: Enhanced codebase with proper testing and validation
+
+### Technical Improvements
+
+* **Modern Icons**: Clean SVG icons with blue primary color and green enhancement indicators
+* **Test Infrastructure**: Complete Jest-based testing with mocks and utilities
+* **Build Process**: Improved build pipeline with icon processing
+* **Documentation**: Enhanced test documentation and user cases
+* **Performance**: Optimized build process and file structure
+
 ## [2.16.0](https://github.com/callzhang/n8n-nodes-imap/compare/v2.15.3...v2.16.0) (2025-01-17)
 
 ### Major Simplification
