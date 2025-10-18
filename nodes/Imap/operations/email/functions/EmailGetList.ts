@@ -233,18 +233,45 @@ export const getEmailsListOperation: IResourceOperationDef = {
         await client.mailboxOpen(mailboxPath, { readOnly: true });
 
         let mailboxCount = 0;
-        for await (let email of client.fetch(searchObject, fetchQuery)) {
-          // Add mailbox information to the email object
-          (email as any).mailboxPath = mailboxPath;
-          emailsList.push(email);
-          totalCount++;
-          mailboxCount++;
+        
+        // First, search for emails using the search object
+        const searchResults = await client.search(searchObject);
+        
+        if (!searchResults) {
+          context.logger?.info(`No emails found in ${mailboxPath}`);
+          continue;
+        }
+        
+        context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
+        
+        if (searchResults.length === 0) {
+          context.logger?.info(`No emails found in ${mailboxPath}`);
+          continue;
+        }
+        
+        // Then fetch the email data for the found UIDs
+        for (const uid of searchResults) {
+          if (limitReached) break;
+          
+          try {
+            const email = await client.fetchOne(uid, fetchQuery, { uid: true });
+            if (email) {
+              // Add mailbox information to the email object
+              (email as any).mailboxPath = mailboxPath;
+              emailsList.push(email);
+              totalCount++;
+              mailboxCount++;
 
-          // apply limit if specified
-          if (limit > 0 && totalCount >= limit) {
-            context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
-            limitReached = true;
-            break;
+              // apply limit if specified
+              if (limit > 0 && totalCount >= limit) {
+                context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
+                limitReached = true;
+                break;
+              }
+            }
+          } catch (fetchError) {
+            context.logger?.warn(`Failed to fetch email UID ${uid}: ${(fetchError as Error).message}`);
+            // Continue with next email
           }
         }
 

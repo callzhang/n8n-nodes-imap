@@ -1,3 +1,20 @@
+## [2.17.2](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.1...v2.17.2) (2025-10-18)
+
+### Critical Search Fix
+
+* **Fixed Get Many Operation**: Corrected the search implementation to use proper IMAP search method
+* **Chinese Character Support**: Fixed search functionality for Chinese characters like "拉钩"
+* **Proper Search Flow**: Now uses `client.search()` first, then `client.fetchOne()` for each result
+* **Enhanced Error Handling**: Added better error handling for search and fetch operations
+* **Improved Logging**: Added detailed logging for search results and email fetching
+
+### Technical Details
+
+* **Search Method Fix**: Changed from incorrect `client.fetch(searchObject, fetchQuery)` to proper `client.search()` + `client.fetchOne()`
+* **Type Safety**: Fixed TypeScript errors with proper type checking for search results
+* **Performance**: Optimized search flow with proper UID handling
+* **UTF-8 Support**: Full support for Chinese and other international characters in search
+
 ## [2.17.1](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.0...v2.17.1) (2025-10-18)
 
 ### Critical Bug Fix
