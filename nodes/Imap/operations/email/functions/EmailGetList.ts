@@ -6,6 +6,52 @@ import { emailSearchParameters, getEmailSearchParametersFromNode } from "../../.
 import { simpleParser } from 'mailparser';
 import { htmlToMarkdown, cleanHtml, htmlToText } from "../../../utils/MarkdownConverter";
 
+/**
+ * Get optimized fetch fields based on search criteria
+ * Excludes body/text fields that require full content fetching
+ */
+function getOptimizedFetchFields(searchObject: any): any {
+  const fields: any = { uid: true };
+  
+  // Check if we need envelope fields
+  const needsEnvelope = searchObject.subject || searchObject.from || searchObject.to;
+  
+  if (needsEnvelope) {
+    fields.envelope = {};
+    
+    if (searchObject.subject) {
+      fields.envelope.subject = true;
+    }
+    
+    if (searchObject.from) {
+      fields.envelope.from = true;
+    }
+    
+    if (searchObject.to) {
+      fields.envelope.to = true;
+    }
+  }
+  
+  // Check if we need date fields
+  if (searchObject.since || searchObject.before) {
+    fields.internalDate = true;
+  }
+  
+  // Check if we need flags
+  if (searchObject.seen !== undefined || searchObject.flagged || searchObject.answered) {
+    fields.flags = true;
+  }
+  
+  // Check if we need size
+  if (searchObject.larger || searchObject.smaller) {
+    fields.size = true;
+  }
+  
+  // Note: We deliberately exclude body/text fields as they require full content fetching
+  // which is not optimized for client-side filtering
+  
+  return fields;
+}
 
 enum EmailParts {
   BodyStructure = 'bodyStructure',
@@ -236,29 +282,130 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
         // Check if we have any search criteria
         const hasSearchCriteria = Object.keys(searchObject).length > 0;
-        
+
         let searchResults: number[] | false;
-        
+
         if (hasSearchCriteria) {
-          // First, search for emails using the search object
+          // First, try server-side search for emails using the search object
           context.logger?.info(`Searching with criteria: ${JSON.stringify(searchObject)}`);
-          searchResults = await client.search(searchObject);
-          
-          if (!searchResults) {
-            context.logger?.info(`Search returned no results in ${mailboxPath}`);
-            continue;
-          }
-          
-          context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
-          
-          if (searchResults.length === 0) {
-            context.logger?.info(`No emails found matching criteria in ${mailboxPath}`);
-            continue;
+
+          try {
+            searchResults = await client.search(searchObject);
+
+            if (!searchResults) {
+              context.logger?.info(`Search returned no results in ${mailboxPath}`);
+              continue;
+            }
+
+            context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
+
+            if (searchResults.length === 0) {
+              context.logger?.info(`No emails found matching criteria in ${mailboxPath}`);
+              continue;
+            }
+          } catch (searchError) {
+            // Server-side search failed (common with limited IMAP servers like Alimail)
+            context.logger?.warn(`Server-side search failed: ${(searchError as Error).message}`);
+            context.logger?.info(`Falling back to optimized client-side search for ${mailboxPath}`);
+
+            // Optimized fallback: Fetch only required fields for client-side filtering
+            const optimizedFields = getOptimizedFetchFields(searchObject);
+            context.logger?.info(`Using optimized fetch fields: ${JSON.stringify(optimizedFields)}`);
+
+            const allEmails: number[] = [];
+            const allEmailData: any[] = [];
+
+            // Fetch emails with only the fields needed for filtering
+            for await (const email of client.fetch({}, optimizedFields)) {
+              if (email.uid) {
+                allEmails.push(email.uid);
+                allEmailData.push(email);
+              }
+            }
+
+            context.logger?.info(`Fetched ${allEmails.length} emails with optimized fields for client-side filtering`);
+
+            // Apply client-side filtering based on search criteria
+            const filteredUids: number[] = [];
+            for (let i = 0; i < allEmails.length; i++) {
+              const uid = allEmails[i];
+              const emailData = allEmailData[i];
+              let matches = true;
+
+              // Check subject filter
+              if (searchObject.subject && emailData.envelope?.subject) {
+                const subject = emailData.envelope.subject.toLowerCase();
+                const searchSubject = searchObject.subject.toLowerCase();
+                if (!subject.includes(searchSubject)) {
+                  matches = false;
+                }
+              }
+
+              // Check from filter
+              if (searchObject.from && emailData.envelope?.from) {
+                const from = emailData.envelope.from.map((addr: any) => addr.address.toLowerCase()).join(' ');
+                const searchFrom = searchObject.from.toLowerCase();
+                if (!from.includes(searchFrom)) {
+                  matches = false;
+                }
+              }
+
+              // Check to filter
+              if (searchObject.to && emailData.envelope?.to) {
+                const to = emailData.envelope.to.map((addr: any) => addr.address.toLowerCase()).join(' ');
+                const searchTo = searchObject.to.toLowerCase();
+                if (!to.includes(searchTo)) {
+                  matches = false;
+                }
+              }
+
+              // Check date filters
+              if (searchObject.since && emailData.internalDate) {
+                const emailDate = new Date(emailData.internalDate);
+                const sinceDate = new Date(searchObject.since);
+                if (emailDate < sinceDate) {
+                  matches = false;
+                }
+              }
+
+              if (searchObject.before && emailData.internalDate) {
+                const emailDate = new Date(emailData.internalDate);
+                const beforeDate = new Date(searchObject.before);
+                if (emailDate > beforeDate) {
+                  matches = false;
+                }
+              }
+
+              // Check flags filters
+              if (searchObject.seen === false && emailData.flags) {
+                if (emailData.flags.includes('\\Seen')) {
+                  matches = false;
+                }
+              }
+
+              if (searchObject.seen === true && emailData.flags) {
+                if (!emailData.flags.includes('\\Seen')) {
+                  matches = false;
+                }
+              }
+
+              if (matches) {
+                filteredUids.push(uid);
+              }
+            }
+
+            searchResults = filteredUids;
+            context.logger?.info(`Optimized client-side search found ${searchResults.length} emails matching criteria in ${mailboxPath}`);
+
+            if (searchResults.length === 0) {
+              context.logger?.info(`No emails found matching criteria in ${mailboxPath}`);
+              continue;
+            }
           }
         } else {
           // No search criteria provided, fetch all emails
           context.logger?.info(`No search criteria provided, fetching all emails from ${mailboxPath}`);
-          
+
           // Get all email UIDs by fetching with minimal query
           const allEmails: number[] = [];
           for await (const email of client.fetch({}, { uid: true })) {
@@ -266,7 +413,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
               allEmails.push(email.uid);
             }
           }
-          
+
           searchResults = allEmails;
           context.logger?.info(`Found ${searchResults.length} total emails in ${mailboxPath}`);
         }
