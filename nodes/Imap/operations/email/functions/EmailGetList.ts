@@ -12,44 +12,44 @@ import { htmlToMarkdown, cleanHtml, htmlToText } from "../../../utils/MarkdownCo
  */
 function getOptimizedFetchFields(searchObject: any): any {
   const fields: any = { uid: true };
-  
+
   // Check if we need envelope fields
   const needsEnvelope = searchObject.subject || searchObject.from || searchObject.to;
-  
+
   if (needsEnvelope) {
     fields.envelope = {};
-    
+
     if (searchObject.subject) {
       fields.envelope.subject = true;
     }
-    
+
     if (searchObject.from) {
       fields.envelope.from = true;
     }
-    
+
     if (searchObject.to) {
       fields.envelope.to = true;
     }
   }
-  
+
   // Check if we need date fields
   if (searchObject.since || searchObject.before) {
     fields.internalDate = true;
   }
-  
+
   // Check if we need flags
   if (searchObject.seen !== undefined || searchObject.flagged || searchObject.answered) {
     fields.flags = true;
   }
-  
+
   // Check if we need size
   if (searchObject.larger || searchObject.smaller) {
     fields.size = true;
   }
-  
+
   // Note: We deliberately exclude body/text fields as they require full content fetching
   // which is not optimized for client-side filtering
-  
+
   return fields;
 }
 
