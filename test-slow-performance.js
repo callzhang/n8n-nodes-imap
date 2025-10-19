@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testSlowPerformance() {
     console.log('🐌 Testing slow performance issue...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const gmail = secrets.gmail;
-    
+
     // Parse host and port from the host string
     const [host, port] = gmail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -38,7 +38,7 @@ async function testSlowPerformance() {
         // Test 2: Simulate the current "no search criteria" behavior
         console.log('🐌 Test 2: Current behavior (fetch all UIDs, then fetch each individually)...');
         const start2 = Date.now();
-        
+
         // Step 1: Fetch all UIDs (this is fast)
         const allUids = [];
         for await (const email of client.fetch({}, { uid: true })) {
@@ -54,10 +54,10 @@ async function testSlowPerformance() {
         const emails = [];
         for (let i = 0; i < Math.min(allUids.length, 20); i++) { // Limit to 20 for testing
             const uid = allUids[i];
-            const email = await client.fetchOne(uid, { 
-                uid: true, 
-                envelope: true, 
-                flags: true 
+            const email = await client.fetchOne(uid, {
+                uid: true,
+                envelope: true,
+                flags: true
             });
             if (email) {
                 emails.push({
@@ -76,10 +76,10 @@ async function testSlowPerformance() {
         console.log('⚡ Test 3: Optimized approach (fetch all at once)...');
         const start3 = Date.now();
         const optimizedEmails = [];
-        for await (const email of client.fetch({}, { 
-            uid: true, 
-            envelope: true, 
-            flags: true 
+        for await (const email of client.fetch({}, {
+            uid: true,
+            envelope: true,
+            flags: true
         })) {
             if (email.uid) {
                 optimizedEmails.push({
@@ -101,7 +101,7 @@ async function testSlowPerformance() {
         console.log(`\n📈 Performance per email:`);
         console.log(`- Current (20 emails): ${((time2a + time2b) / 20).toFixed(2)}ms per email`);
         console.log(`- Optimized (${optimizedEmails.length} emails): ${(time3 / optimizedEmails.length).toFixed(2)}ms per email`);
-        
+
         const improvement = ((time2a + time2b) / 20) / (time3 / optimizedEmails.length);
         console.log(`\n🚀 Optimized approach is ${improvement.toFixed(1)}x faster per email!`);
 

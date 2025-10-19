@@ -448,7 +448,7 @@ export const getEmailsListOperation: IResourceOperationDef = {
         } else {
           // For no search criteria, fetch all emails at once (much faster)
           context.logger?.info(`Fetching all emails at once for better performance`);
-          
+
           for await (const email of client.fetch({}, fetchQuery)) {
             if (limitReached) break;
             if (email.uid) {

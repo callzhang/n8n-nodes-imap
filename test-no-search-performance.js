@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testNoSearchPerformance() {
     console.log('🔍 Testing IMAP performance without search queries...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const gmail = secrets.gmail;
-    
+
     // Parse host and port from the host string
     const [host, port] = gmail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -84,12 +84,12 @@ async function testNoSearchPerformance() {
         const start6 = Date.now();
         const fullEmails = [];
         count = 0;
-        for await (const message of client.fetch({}, { 
-            uid: true, 
-            envelope: true, 
-            flags: true, 
+        for await (const message of client.fetch({}, {
+            uid: true,
+            envelope: true,
+            flags: true,
             internalDate: true,
-            size: true 
+            size: true
         })) {
             if (message.uid && count < 10) {
                 fullEmails.push({
@@ -121,10 +121,10 @@ async function testNoSearchPerformance() {
         const start8 = Date.now();
         const filteredEmails = [];
         for (const uid of searchResults.slice(0, 8)) { // Limit to 8 as requested
-            const message = await client.fetchOne(uid, { 
-                uid: true, 
-                envelope: true, 
-                flags: true 
+            const message = await client.fetchOne(uid, {
+                uid: true,
+                envelope: true,
+                flags: true
             });
             if (message) {
                 filteredEmails.push({
@@ -143,13 +143,13 @@ async function testNoSearchPerformance() {
         // Test 9: Simulate the current EmailGetList behavior (client-side fallback)
         console.log('🔄 Test 9: Simulating EmailGetList client-side fallback...');
         const start9 = Date.now();
-        
+
         // This simulates what happens in EmailGetList when search fails
         const allEmailsForFiltering = [];
-        for await (const message of client.fetch({}, { 
-            uid: true, 
-            envelope: true, 
-            flags: true 
+        for await (const message of client.fetch({}, {
+            uid: true,
+            envelope: true,
+            flags: true
         })) {
             if (message.uid) {
                 allEmailsForFiltering.push({
@@ -160,14 +160,14 @@ async function testNoSearchPerformance() {
                 });
             }
         }
-        
+
         // Client-side filtering (like in EmailGetList fallback)
         const clientFiltered = allEmailsForFiltering.filter(email => {
             const isSeen = email.flags.includes('\\Seen');
             const isFlagged = email.flags.includes('\\Flagged');
             return isSeen && !isFlagged;
         }).slice(0, 8); // Limit to 8 as requested
-        
+
         const time9 = Date.now() - start9;
         console.log(`✅ Client-side filtering: ${time9}ms (${clientFiltered.length} emails)\n`);
 
@@ -191,7 +191,7 @@ async function testNoSearchPerformance() {
         console.log(`\n🔍 ANALYSIS FOR YOUR CONDITIONS:`);
         console.log(`- Server search: ${time7a}ms for ${searchResults.length} results`);
         console.log(`- Client filtering: ${time9}ms for ${clientFiltered.length} results`);
-        
+
         if (time7a < time9) {
             console.log(`✅ Server search is ${((time9 - time7a) / time9 * 100).toFixed(1)}% faster than client filtering`);
         } else {

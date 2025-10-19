@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testPerformanceFix() {
     console.log('🚀 Testing performance fix for no search criteria...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const gmail = secrets.gmail;
-    
+
     // Parse host and port from the host string
     const [host, port] = gmail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -38,7 +38,7 @@ async function testPerformanceFix() {
         // Test 2: Simulate the OLD behavior (fetch UIDs, then fetch individually)
         console.log('🐌 Test 2: OLD behavior (fetch UIDs, then fetch individually)...');
         const start2 = Date.now();
-        
+
         // Step 1: Fetch all UIDs
         const allUids = [];
         for await (const email of client.fetch({}, { uid: true })) {
@@ -54,10 +54,10 @@ async function testPerformanceFix() {
         const emails = [];
         for (let i = 0; i < Math.min(allUids.length, 10); i++) { // Limit to 10 for testing
             const uid = allUids[i];
-            const email = await client.fetchOne(uid, { 
-                uid: true, 
-                envelope: true, 
-                flags: true 
+            const email = await client.fetchOne(uid, {
+                uid: true,
+                envelope: true,
+                flags: true
             });
             if (email) {
                 emails.push({
@@ -77,10 +77,10 @@ async function testPerformanceFix() {
         const start3 = Date.now();
         const newEmails = [];
         let count = 0;
-        for await (const email of client.fetch({}, { 
-            uid: true, 
-            envelope: true, 
-            flags: true 
+        for await (const email of client.fetch({}, {
+            uid: true,
+            envelope: true,
+            flags: true
         })) {
             if (email.uid && count < 10) { // Limit to 10 for testing
                 newEmails.push({
@@ -100,10 +100,10 @@ async function testPerformanceFix() {
         console.log('========================');
         console.log(`OLD approach: ${time2a + time2b}ms for 10 emails`);
         console.log(`NEW approach: ${time3}ms for 10 emails`);
-        
+
         const improvement = (time2a + time2b) / time3;
         console.log(`\n🚀 NEW approach is ${improvement.toFixed(1)}x faster!`);
-        
+
         if (improvement > 2) {
             console.log('✅ Significant performance improvement achieved!');
         } else if (improvement > 1.5) {
