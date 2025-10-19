@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testAlimailChineseSearch() {
     console.log('🔍 Testing Alimail Chinese search for "拉勾" in "已发送" mailbox...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const alimail = secrets.alimail;
-    
+
     // Parse host and port from the host string
     const [host, port] = alimail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -38,20 +38,20 @@ async function testAlimailChineseSearch() {
         console.log('');
 
         // Test 2: Check if "已发送" mailbox exists
-        const sentMailbox = mailboxes.find(mb => 
-            mb.name.includes('已发送') || 
-            mb.name.includes('Sent') || 
+        const sentMailbox = mailboxes.find(mb =>
+            mb.name.includes('已发送') ||
+            mb.name.includes('Sent') ||
             mb.path.includes('已发送') ||
             mb.path.includes('Sent')
         );
-        
+
         if (!sentMailbox) {
             console.log('❌ "已发送" mailbox not found!');
             console.log('Available mailboxes:');
             mailboxes.forEach(mb => console.log(`  - "${mb.name}" (${mb.path})`));
             return;
         }
-        
+
         console.log(`✅ Found sent mailbox: "${sentMailbox.name}" (${sentMailbox.path})\n`);
 
         // Test 3: Open the sent mailbox
@@ -73,7 +73,7 @@ async function testAlimailChineseSearch() {
             });
             const time5 = Date.now() - start5;
             console.log(`✅ Server search: ${time5}ms (${searchResults.length} results)`);
-            
+
             if (searchResults.length > 0) {
                 console.log('🎉 Server search found results!');
                 console.log('First 5 UIDs:', searchResults.slice(0, 5));
@@ -94,7 +94,7 @@ async function testAlimailChineseSearch() {
             });
             const time6 = Date.now() - start6;
             console.log(`✅ Server search for "拉": ${time6}ms (${searchResults6.length} results)`);
-            
+
             if (searchResults6.length > 0) {
                 console.log('🎉 Server search for "拉" found results!');
                 console.log('First 5 UIDs:', searchResults6.slice(0, 5));
@@ -115,7 +115,7 @@ async function testAlimailChineseSearch() {
             });
             const time7 = Date.now() - start7;
             console.log(`✅ Server search for "勾": ${time7}ms (${searchResults7.length} results)`);
-            
+
             if (searchResults7.length > 0) {
                 console.log('🎉 Server search for "勾" found results!');
                 console.log('First 5 UIDs:', searchResults7.slice(0, 5));
@@ -130,11 +130,11 @@ async function testAlimailChineseSearch() {
         // Test 8: Client-side fallback - fetch all emails and search
         console.log('🔄 Test 8: Client-side fallback search...');
         const start8 = Date.now();
-        
+
         const allEmails = [];
-        for await (const email of client.fetch({}, { 
-            uid: true, 
-            envelope: true 
+        for await (const email of client.fetch({}, {
+            uid: true,
+            envelope: true
         })) {
             if (email.uid) {
                 allEmails.push({
@@ -145,18 +145,18 @@ async function testAlimailChineseSearch() {
                 });
             }
         }
-        
+
         const time8a = Date.now() - start8;
         console.log(`✅ Fetched ${allEmails.length} emails: ${time8a}ms`);
-        
+
         // Search for "拉勾" in subjects
-        const matchingEmails = allEmails.filter(email => 
+        const matchingEmails = allEmails.filter(email =>
             email.subject.includes('拉勾')
         );
-        
+
         const time8b = Date.now() - start8;
         console.log(`✅ Client-side search: ${time8b}ms (${matchingEmails.length} results)`);
-        
+
         if (matchingEmails.length > 0) {
             console.log('🎉 Client-side search found results!');
             console.log('Matching emails:');
@@ -165,7 +165,7 @@ async function testAlimailChineseSearch() {
             });
         } else {
             console.log('❌ Client-side search found no results');
-            
+
             // Show some sample subjects to debug
             console.log('\n📋 Sample subjects from sent mailbox:');
             allEmails.slice(0, 10).forEach(email => {
@@ -176,11 +176,11 @@ async function testAlimailChineseSearch() {
 
         // Test 9: Check if there are any emails with Chinese characters
         console.log('🔤 Test 9: Checking for Chinese characters in subjects...');
-        const chineseEmails = allEmails.filter(email => 
+        const chineseEmails = allEmails.filter(email =>
             /[\u4e00-\u9fff]/.test(email.subject)
         );
         console.log(`Found ${chineseEmails.length} emails with Chinese characters in subject`);
-        
+
         if (chineseEmails.length > 0) {
             console.log('Sample Chinese subjects:');
             chineseEmails.slice(0, 5).forEach(email => {

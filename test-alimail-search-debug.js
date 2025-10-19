@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testAlimailSearchDebug() {
     console.log('🔍 Debugging Alimail search functionality...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const alimail = secrets.alimail;
-    
+
     // Parse host and port from the host string
     const [host, port] = alimail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -40,29 +40,29 @@ async function testAlimailSearchDebug() {
 
         // Test 2: Try different mailboxes for "拉勾"
         const mailboxesToTest = ['INBOX', '已发送', '草稿'];
-        
+
         for (const mailboxName of mailboxesToTest) {
             console.log(`📂 Testing mailbox: ${mailboxName}`);
-            
+
             try {
                 await client.mailboxOpen(mailboxName, { readOnly: true });
-                
+
                 // Get message count
                 const status = await client.status(mailboxName, { messages: true });
                 console.log(`  Total messages: ${status.messages}`);
-                
+
                 if (status.messages === 0) {
                     console.log(`  ⚠️  Mailbox ${mailboxName} is empty, skipping...\n`);
                     continue;
                 }
-                
+
                 // Try server-side search
                 try {
                     const searchResults = await client.search({
                         subject: '拉勾'
                     });
                     console.log(`  🔍 Server search for "拉勾": ${searchResults ? searchResults.length : 'undefined'} results`);
-                    
+
                     if (searchResults && searchResults.length > 0) {
                         console.log(`  🎉 Found results in ${mailboxName}!`);
                         console.log(`  First 3 UIDs:`, searchResults.slice(0, 3));
@@ -70,16 +70,16 @@ async function testAlimailSearchDebug() {
                 } catch (searchError) {
                     console.log(`  ❌ Server search failed: ${searchError.message}`);
                 }
-                
+
                 // Try client-side search for first 50 emails
                 console.log(`  🔄 Client-side search (first 50 emails)...`);
                 const startTime = Date.now();
                 const emails = [];
                 let count = 0;
-                
-                for await (const email of client.fetch({}, { 
-                    uid: true, 
-                    envelope: true 
+
+                for await (const email of client.fetch({}, {
+                    uid: true,
+                    envelope: true
                 })) {
                     if (email.uid && count < 50) {
                         emails.push({
@@ -91,15 +91,15 @@ async function testAlimailSearchDebug() {
                         count++;
                     }
                 }
-                
+
                 const fetchTime = Date.now() - startTime;
                 console.log(`  ✅ Fetched ${emails.length} emails: ${fetchTime}ms`);
-                
+
                 // Search for "拉勾" in subjects
-                const matchingEmails = emails.filter(email => 
+                const matchingEmails = emails.filter(email =>
                     email.subject.includes('拉勾')
                 );
-                
+
                 if (matchingEmails.length > 0) {
                     console.log(`  🎉 Client-side found ${matchingEmails.length} results!`);
                     matchingEmails.forEach(email => {
@@ -107,12 +107,12 @@ async function testAlimailSearchDebug() {
                     });
                 } else {
                     console.log(`  ❌ No emails with "拉勾" in subject`);
-                    
+
                     // Check for any emails with "拉" or "勾"
-                    const partialMatches = emails.filter(email => 
+                    const partialMatches = emails.filter(email =>
                         email.subject.includes('拉') || email.subject.includes('勾')
                     );
-                    
+
                     if (partialMatches.length > 0) {
                         console.log(`  🔍 Found ${partialMatches.length} emails with partial matches:`);
                         partialMatches.slice(0, 3).forEach(email => {
@@ -120,24 +120,24 @@ async function testAlimailSearchDebug() {
                         });
                     }
                 }
-                
+
             } catch (error) {
                 console.log(`  ❌ Error with mailbox ${mailboxName}: ${error.message}`);
             }
-            
+
             console.log('');
         }
-        
+
         // Test 3: Check if "拉勾" exists in any email content
         console.log('🔍 Test 3: Searching for "拉勾" in email content...');
         await client.mailboxOpen('已发送', { readOnly: true });
-        
+
         const startTime = Date.now();
         const emails = [];
         let count = 0;
-        
-        for await (const email of client.fetch({}, { 
-            uid: true, 
+
+        for await (const email of client.fetch({}, {
+            uid: true,
             envelope: true,
             source: true  // Get full email source
         })) {
@@ -150,15 +150,15 @@ async function testAlimailSearchDebug() {
                 count++;
             }
         }
-        
+
         const fetchTime = Date.now() - startTime;
         console.log(`✅ Fetched ${emails.length} emails with source: ${fetchTime}ms`);
-        
+
         // Search for "拉勾" in email source
-        const contentMatches = emails.filter(email => 
+        const contentMatches = emails.filter(email =>
             email.source.includes('拉勾')
         );
-        
+
         if (contentMatches.length > 0) {
             console.log(`🎉 Found ${contentMatches.length} emails with "拉勾" in content!`);
             contentMatches.forEach(email => {

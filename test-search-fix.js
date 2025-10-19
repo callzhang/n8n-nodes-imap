@@ -4,14 +4,14 @@ const fs = require('fs');
 
 async function testSearchFix() {
     console.log('🔧 Testing search fix for undefined results...\n');
-    
+
     // Load credentials
     const secrets = yaml.load(fs.readFileSync('secrets.yaml', 'utf8'));
     const alimail = secrets.alimail;
-    
+
     // Parse host and port from the host string
     const [host, port] = alimail.host.split(':');
-    
+
     const client = new ImapFlow({
         host: host,
         port: parseInt(port),
@@ -35,13 +35,13 @@ async function testSearchFix() {
         const searchResults = await client.search({
             subject: '拉勾'
         });
-        
+
         console.log(`Search results type: ${typeof searchResults}`);
         console.log(`Search results value: ${searchResults}`);
         console.log(`Is undefined: ${searchResults === undefined}`);
         console.log(`Is null: ${searchResults === null}`);
         console.log(`Is array: ${Array.isArray(searchResults)}`);
-        
+
         if (Array.isArray(searchResults)) {
             console.log(`Array length: ${searchResults.length}`);
         }
@@ -49,7 +49,7 @@ async function testSearchFix() {
 
         // Test 2: Simulate the fixed logic
         console.log('🔧 Test 2: Simulating fixed logic...');
-        
+
         let searchResults2;
         try {
             searchResults2 = await client.search({
@@ -70,9 +70,9 @@ async function testSearchFix() {
 
         // Test 3: Test with a search that might work
         console.log('🔍 Test 3: Testing with different search terms...');
-        
+
         const testTerms = ['邀请', '修改', '回复', '拉勾'];
-        
+
         for (const term of testTerms) {
             try {
                 const results = await client.search({
@@ -88,11 +88,11 @@ async function testSearchFix() {
         // Test 4: Test client-side fallback
         console.log('🔄 Test 4: Testing client-side fallback...');
         const startTime = Date.now();
-        
+
         const allEmails = [];
-        for await (const email of client.fetch({}, { 
-            uid: true, 
-            envelope: true 
+        for await (const email of client.fetch({}, {
+            uid: true,
+            envelope: true
         })) {
             if (email.uid) {
                 allEmails.push({
@@ -101,17 +101,17 @@ async function testSearchFix() {
                 });
             }
         }
-        
+
         const fetchTime = Date.now() - startTime;
         console.log(`✅ Fetched ${allEmails.length} emails: ${fetchTime}ms`);
-        
+
         // Search for "拉勾"
-        const matchingEmails = allEmails.filter(email => 
+        const matchingEmails = allEmails.filter(email =>
             email.subject.includes('拉勾')
         );
-        
+
         console.log(`✅ Client-side search for "拉勾": ${matchingEmails.length} results`);
-        
+
         if (matchingEmails.length > 0) {
             console.log('🎉 Found matching emails:');
             matchingEmails.forEach(email => {
@@ -119,12 +119,12 @@ async function testSearchFix() {
             });
         } else {
             console.log('❌ No emails found with "拉勾"');
-            
+
             // Check for partial matches
-            const partialMatches = allEmails.filter(email => 
+            const partialMatches = allEmails.filter(email =>
                 email.subject.includes('拉') || email.subject.includes('勾')
             );
-            
+
             if (partialMatches.length > 0) {
                 console.log(`🔍 Found ${partialMatches.length} emails with partial matches:`);
                 partialMatches.slice(0, 5).forEach(email => {
