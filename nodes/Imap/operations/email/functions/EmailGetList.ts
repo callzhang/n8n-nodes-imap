@@ -292,9 +292,10 @@ export const getEmailsListOperation: IResourceOperationDef = {
           try {
             searchResults = await client.search(searchObject);
 
-            if (!searchResults) {
-              context.logger?.info(`Search returned no results in ${mailboxPath}`);
-              continue;
+            if (!searchResults || searchResults === undefined) {
+              // Server search returned undefined, treat as failure and fall back to client-side
+              context.logger?.warn(`Server search returned undefined, falling back to client-side search`);
+              throw new Error('Server search returned undefined');
             }
 
             context.logger?.info(`Found ${searchResults.length} emails matching search criteria in ${mailboxPath}`);
