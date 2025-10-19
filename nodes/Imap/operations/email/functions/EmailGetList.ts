@@ -403,10 +403,10 @@ export const getEmailsListOperation: IResourceOperationDef = {
             }
           }
         } else {
-          // No search criteria provided, fetch all emails
+          // No search criteria provided, fetch all emails directly
           context.logger?.info(`No search criteria provided, fetching all emails from ${mailboxPath}`);
 
-          // Get all email UIDs by fetching with minimal query
+          // Fetch all emails directly instead of UIDs + individual fetch
           const allEmails: number[] = [];
           for await (const email of client.fetch({}, { uid: true })) {
             if (email.uid) {
@@ -419,12 +419,39 @@ export const getEmailsListOperation: IResourceOperationDef = {
         }
 
         // Then fetch the email data for the found UIDs
-        for (const uid of searchResults) {
-          if (limitReached) break;
+        if (hasSearchCriteria) {
+          // For search results, fetch individually (already optimized)
+          for (const uid of searchResults) {
+            if (limitReached) break;
 
-          try {
-            const email = await client.fetchOne(uid, fetchQuery, { uid: true });
-            if (email) {
+            try {
+              const email = await client.fetchOne(uid, fetchQuery, { uid: true });
+              if (email) {
+                // Add mailbox information to the email object
+                (email as any).mailboxPath = mailboxPath;
+                emailsList.push(email);
+                totalCount++;
+                mailboxCount++;
+
+                // apply limit if specified
+                if (limit > 0 && totalCount >= limit) {
+                  context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
+                  limitReached = true;
+                  break;
+                }
+              }
+            } catch (fetchError) {
+              context.logger?.warn(`Failed to fetch email UID ${uid}: ${(fetchError as Error).message}`);
+              // Continue with next email
+            }
+          }
+        } else {
+          // For no search criteria, fetch all emails at once (much faster)
+          context.logger?.info(`Fetching all emails at once for better performance`);
+          
+          for await (const email of client.fetch({}, fetchQuery)) {
+            if (limitReached) break;
+            if (email.uid) {
               // Add mailbox information to the email object
               (email as any).mailboxPath = mailboxPath;
               emailsList.push(email);
@@ -438,9 +465,6 @@ export const getEmailsListOperation: IResourceOperationDef = {
                 break;
               }
             }
-          } catch (fetchError) {
-            context.logger?.warn(`Failed to fetch email UID ${uid}: ${(fetchError as Error).message}`);
-            // Continue with next email
           }
         }
 
