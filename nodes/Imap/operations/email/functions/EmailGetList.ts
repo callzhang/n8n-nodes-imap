@@ -379,13 +379,13 @@ export const getEmailsListOperation: IResourceOperationDef = {
 
               // Check flags filters
               if (searchObject.seen === false && emailData.flags) {
-                if (emailData.flags.includes('\\Seen')) {
+                if (emailData.flags.has('\\Seen')) {
                   matches = false;
                 }
               }
 
               if (searchObject.seen === true && emailData.flags) {
-                if (!emailData.flags.includes('\\Seen')) {
+                if (!emailData.flags.has('\\Seen')) {
                   matches = false;
                 }
               }
