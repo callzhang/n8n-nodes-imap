@@ -350,7 +350,7 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         if (!isSuccess) {
           const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
           context.logger?.warn(`Server returned false for flag operation on UID ${emailUid}. This may indicate server limitations with custom labels.`);
-          
+
           // Check if this is a custom label that the server doesn't support
           const hasCustomLabels = allFlagsToSet.some(flag => flag.includes(':'));
           if (hasCustomLabels) {
