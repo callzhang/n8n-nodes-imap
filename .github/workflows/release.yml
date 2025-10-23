@@ -29,6 +29,10 @@ jobs:
         run: npm audit signatures
       - name: Build and test
         run: npm run prepublishOnly
+      - name: Run Jest Tests
+        run: npm run test:jest
+      - name: Run Integration Tests
+        run: npm run test:run
   release:
     name: Release
     runs-on: ubuntu-latest

@@ -5,8 +5,8 @@
  * for the IMAP Enhanced Node test suite.
  */
 
+// @ts-nocheck
 import { jest } from '@jest/globals';
-import { IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
 
 // Mock IMAP credentials for testing
 export const mockCredentials = {
@@ -80,7 +80,7 @@ export const mockFetchResults = {
 };
 
 // Mock execute functions
-export const createMockExecuteFunctions = (): Partial<IExecuteFunctions> => ({
+export const createMockExecuteFunctions = () => ({
   getNodeParameter: jest.fn((paramName: string, itemIndex: number) => {
     const mockParams: { [key: string]: any } = {
       mailboxPath: { value: 'INBOX' },
@@ -142,7 +142,7 @@ export const createMockExecuteFunctions = (): Partial<IExecuteFunctions> => ({
 });
 
 // Mock load options functions
-export const createMockLoadOptionsFunctions = (): Partial<ILoadOptionsFunctions> => ({
+export const createMockLoadOptionsFunctions = () => ({
   getCredentials: jest.fn().mockResolvedValue(mockCredentials),
   logger: {
     info: jest.fn(),

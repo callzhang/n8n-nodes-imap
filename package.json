@@ -27,13 +27,20 @@
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json",
     "semantic-release": "semantic-release",
     "test": "cd tests && npm test",
-    "test:unit": "cd tests && npm run test:unit",
-    "test:integration": "cd tests && npm run test:integration",
-    "test:coverage": "cd tests && npm run test:coverage",
-    "test:watch": "cd tests && npm run test:watch",
-    "test:ci": "cd tests && npm run test:ci",
-    "test:debug": "cd tests && npm run test:debug",
-    "test:run": "./tests/run-tests.sh"
+    "test:unit": "npx jest tests/unit",
+    "test:integration": "npx jest tests/integration",
+    "test:coverage": "npx jest --coverage",
+    "test:watch": "npx jest --watch",
+    "test:ci": "npx jest --ci --coverage --watchAll=false",
+    "test:debug": "npx jest --detectOpenHandles --forceExit",
+    "test:run": "node run-tests.js",
+    "test:fetchone": "node test-fetchone-uid-parameter.js",
+    "test:n8n": "node test-n8n-node-behavior.js",
+    "test:regression": "node test-regression-fetchone-uid.js",
+    "test:multi": "node test-multi-provider.js",
+    "test:jest": "npx jest",
+    "test:jest:integration": "npx jest tests/integration",
+    "test:jest:unit": "npx jest tests/unit"
   },
   "files": [
     "dist"
@@ -49,11 +56,13 @@
   },
   "devDependencies": {
     "@google/semantic-release-replace-plugin": "^1.2.7",
+    "@jest/globals": "^29.7.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/release-notes-generator": "^14.0.3",
     "@types/imapflow": "^1.0.22",
+    "@types/jest": "^30.0.0",
     "@types/mailparser": "^3.4.6",
     "@types/nodemailer": "^6.4.17",
     "@typescript-eslint/parser": "~7.18",
@@ -61,9 +70,11 @@
     "cross-env": "^7.0.3",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
     "gulp": "^5.0.1",
+    "jest": "^29.7.0",
     "n8n-workflow": "*",
     "prettier": "^3.5.3",
     "semantic-release": "^24.2.5",
+    "ts-jest": "^29.4.5",
     "typescript": "~5.8.3"
   },
   "peerDependencies": {

@@ -252,8 +252,8 @@ export const getEmailsListOperation: IResourceOperationDef = {
     }
 
     // log searchObject and fetchQuery
-    context.logger?.debug(`Search object: ${JSON.stringify(searchObject)}`);
-    context.logger?.debug(`Fetch query: ${JSON.stringify(fetchQuery)}`);
+    context.logger?.info(`Search object: ${JSON.stringify(searchObject)}`);
+    context.logger?.info(`Fetch query: ${JSON.stringify(fetchQuery)}`);
 
     // if any content parts are requested, fetch source for better content extraction
     if (includeTextContent || includeHtmlContent || includeMarkdownContent) {
@@ -422,17 +422,20 @@ export const getEmailsListOperation: IResourceOperationDef = {
         // Then fetch the email data for the found UIDs
         if (hasSearchCriteria) {
           // For search results, fetch individually (already optimized)
+          context.logger?.info(`Fetching ${searchResults.length} emails individually...`);
           for (const uid of searchResults) {
             if (limitReached) break;
 
             try {
-              const email = await client.fetchOne(uid, fetchQuery, { uid: true });
+              context.logger?.debug(`Fetching UID ${uid}...`);
+              const email = await client.fetchOne(uid, fetchQuery);
               if (email) {
                 // Add mailbox information to the email object
                 (email as any).mailboxPath = mailboxPath;
                 emailsList.push(email);
                 totalCount++;
                 mailboxCount++;
+                context.logger?.debug(`Successfully fetched UID ${uid}: "${email.envelope?.subject || 'No subject'}"`);
 
                 // apply limit if specified
                 if (limit > 0 && totalCount >= limit) {
@@ -440,6 +443,8 @@ export const getEmailsListOperation: IResourceOperationDef = {
                   limitReached = true;
                   break;
                 }
+              } else {
+                context.logger?.warn(`No email data returned for UID ${uid}`);
               }
             } catch (fetchError) {
               context.logger?.warn(`Failed to fetch email UID ${uid}: ${(fetchError as Error).message}`);
@@ -477,6 +482,9 @@ export const getEmailsListOperation: IResourceOperationDef = {
     }
 
     context.logger?.info(`Found ${emailsList.length} total emails across ${mailboxesToSearch.length} mailbox(es)`);
+
+    // Debug: Log the emailsList contents
+    context.logger?.info(`EmailsList contents: ${JSON.stringify(emailsList.map(e => ({ uid: e.uid, subject: e.envelope?.subject })))}`);
 
     // process the emails
     for (const email of emailsList) {
@@ -612,6 +620,10 @@ export const getEmailsListOperation: IResourceOperationDef = {
         json: item_json,
       });
     }
+
+    // Debug: Log final return data
+    context.logger?.info(`Returning ${returnData.length} items to n8n`);
+    context.logger?.debug(`Return data: ${JSON.stringify(returnData.map(item => ({ uid: item.json.uid, subject: (item.json.envelope as any)?.subject })))}`);
 
     return returnData;
   },
