@@ -289,6 +289,7 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
       flagsToSet: allFlagsToSet,
       flagsToRemove: allFlagsToRemove,
       hasSetAction: hasSetAction,
+      customLabelsSkipped: allFlagsToSet.filter(flag => flag.includes(':')),
     };
 
     context.logger?.info(`Setting flags "${allFlagsToSet.join(',')}" and removing flags "${allFlagsToRemove.join(',')}" on email "${emailUid}"`);
@@ -348,12 +349,23 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         });
         if (!isSuccess) {
           const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
-          context.logger?.error(`Failed to set flags for UID ${emailUid}: ${JSON.stringify(errorsList)}`);
-          throw new NodeImapError(
-            context.getNode(),
-            `Unable to set flags for UID ${emailUid}. Flags: ${allFlagsToSet.join(', ')}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
-            errorsList
-          );
+          context.logger?.warn(`Server returned false for flag operation on UID ${emailUid}. This may indicate server limitations with custom labels.`);
+          
+          // Check if this is a custom label that the server doesn't support
+          const hasCustomLabels = allFlagsToSet.some(flag => flag.includes(':'));
+          if (hasCustomLabels) {
+            context.logger?.warn(`Custom labels (${allFlagsToSet.filter(flag => flag.includes(':')).join(', ')}) may not be supported by this IMAP server.`);
+            // Don't throw an error for unsupported custom labels, just log a warning
+            context.logger?.info(`Skipping unsupported custom labels for UID ${emailUid}`);
+          } else {
+            // Only throw error for standard flags that fail
+            context.logger?.error(`Failed to set standard flags for UID ${emailUid}: ${JSON.stringify(errorsList)}`);
+            throw new NodeImapError(
+              context.getNode(),
+              `Unable to set flags for UID ${emailUid}. Flags: ${allFlagsToSet.join(', ')}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
+              errorsList
+            );
+          }
         }
       } catch (error) {
         const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
