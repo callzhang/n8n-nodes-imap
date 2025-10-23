@@ -209,21 +209,37 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
     // Validate parameters
     ParameterValidator.validateUids(emailUid);
 
+    // Initialize arrays for processing
     var flagsToSet : string[] = [];
     var flagsToRemove : string[] = [];
-    for (const flagName in flags) {
-        if (flags[flagName]) {
-          flagsToSet.push(flagName);
-        } else {
-          flagsToRemove.push(flagName);
-        }
-    }
-
-    // Process custom labels
     let customLabelsToSet: string[] = [];
     let customLabelsToRemove: string[] = [];
     let hasSetAction = false;
     let incompleteLabels: string[] = [];
+
+    // Process flags and custom labels
+    context.logger?.info(`Processing flags: ${JSON.stringify(flags)}`);
+    for (const flagName in flags) {
+        // Check if this is a custom label (contains colon) or a standard flag
+        if (flagName.includes(':')) {
+          // This is a custom label, process it separately
+          const [labelName, labelValue] = flagName.split(':', 2);
+          context.logger?.info(`Processing custom label: ${labelName}:${labelValue}, value: ${flags[flagName]}`);
+          if (flags[flagName]) {
+            customLabelsToSet.push(`${labelName}:${labelValue}`);
+          } else {
+            customLabelsToRemove.push(`${labelName}:${labelValue}`);
+          }
+        } else {
+          // This is a standard flag
+          context.logger?.info(`Processing standard flag: ${flagName}, value: ${flags[flagName]}`);
+          if (flags[flagName]) {
+            flagsToSet.push(flagName);
+          } else {
+            flagsToRemove.push(flagName);
+          }
+        }
+    }
 
     if (customLabels.label && Array.isArray(customLabels.label)) {
       for (const labelItem of customLabels.label) {
