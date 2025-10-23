@@ -296,15 +296,26 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
         );
 
         if (existingCustomLabels.length > 0) {
-          ImapFlowErrorCatcher.getInstance().startErrorCatching();
-          const isSuccess = await client.messageFlagsRemove(emailUid, existingCustomLabels, {
-            uid: true,
-          });
-          if (!isSuccess) {
+          try {
+            ImapFlowErrorCatcher.getInstance().startErrorCatching();
+            const isSuccess = await client.messageFlagsRemove(emailUid, existingCustomLabels, {
+              uid: true,
+            });
+            if (!isSuccess) {
+              const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+              context.logger?.error(`Failed to remove existing custom labels for UID ${emailUid}: ${JSON.stringify(errorsList)}`);
+              throw new NodeImapError(
+                context.getNode(),
+                `Unable to remove existing custom labels for UID ${emailUid}. Labels: ${existingCustomLabels.join(', ')}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
+                errorsList
+              );
+            }
+          } catch (error) {
             const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+            context.logger?.error(`Exception while removing existing custom labels for UID ${emailUid}: ${(error as Error).message}`);
             throw new NodeImapError(
               context.getNode(),
-              "Unable to remove existing custom labels",
+              `Unable to remove existing custom labels for UID ${emailUid}. Labels: ${existingCustomLabels.join(', ')}. Error: ${(error as Error).message}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
               errorsList
             );
           }
@@ -314,15 +325,26 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
 
     // Add new flags and custom labels
     if (allFlagsToSet.length > 0) {
-      ImapFlowErrorCatcher.getInstance().startErrorCatching();
-      const isSuccess : boolean = await client.messageFlagsAdd(emailUid, allFlagsToSet, {
-        uid: true,
-      });
-      if (!isSuccess) {
+      try {
+        ImapFlowErrorCatcher.getInstance().startErrorCatching();
+        const isSuccess : boolean = await client.messageFlagsAdd(emailUid, allFlagsToSet, {
+          uid: true,
+        });
+        if (!isSuccess) {
+          const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+          context.logger?.error(`Failed to set flags for UID ${emailUid}: ${JSON.stringify(errorsList)}`);
+          throw new NodeImapError(
+            context.getNode(),
+            `Unable to set flags for UID ${emailUid}. Flags: ${allFlagsToSet.join(', ')}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
+            errorsList
+          );
+        }
+      } catch (error) {
         const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+        context.logger?.error(`Exception while setting flags for UID ${emailUid}: ${(error as Error).message}`);
         throw new NodeImapError(
           context.getNode(),
-          "Unable to set flags",
+          `Unable to set flags for UID ${emailUid}. Flags: ${allFlagsToSet.join(', ')}. Error: ${(error as Error).message}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
           errorsList
         );
       }
@@ -330,14 +352,25 @@ export const setEmailFlagsOperation: IResourceOperationDef = {
 
     // Remove specified flags and custom labels (for non-set actions)
     if (allFlagsToRemove.length > 0 && !hasSetAction) {
-      const isSuccess : boolean = await client.messageFlagsRemove(emailUid, allFlagsToRemove, {
-        uid: true,
-      });
-      if (!isSuccess) {
+      try {
+        const isSuccess : boolean = await client.messageFlagsRemove(emailUid, allFlagsToRemove, {
+          uid: true,
+        });
+        if (!isSuccess) {
+          const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+          context.logger?.error(`Failed to remove flags for UID ${emailUid}: ${JSON.stringify(errorsList)}`);
+          throw new NodeImapError(
+            context.getNode(),
+            `Unable to remove flags for UID ${emailUid}. Flags: ${allFlagsToRemove.join(', ')}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
+            errorsList
+          );
+        }
+      } catch (error) {
         const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
+        context.logger?.error(`Exception while removing flags for UID ${emailUid}: ${(error as Error).message}`);
         throw new NodeImapError(
           context.getNode(),
-          "Unable to remove flags",
+          `Unable to remove flags for UID ${emailUid}. Flags: ${allFlagsToRemove.join(', ')}. Error: ${(error as Error).message}. ${errorsList.getCaughtEntries().length > 0 ? 'Server errors: ' + errorsList.toString() : 'No additional details provided by the IMAP server.'}`,
           errorsList
         );
       }
