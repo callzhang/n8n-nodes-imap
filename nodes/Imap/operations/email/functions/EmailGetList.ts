@@ -317,59 +317,71 @@ export const getEmailsListOperation: IResourceOperationDef = {
             const allEmailData: any[] = [];
 
             // Fetch emails with only the fields needed for filtering
+            // Performance optimization: Limit processing for large mailboxes
+            const maxProcess = limit > 0 ? limit * 5 : 2000; // Limit processing for performance
+            let processedCount = 0;
+
             for await (const email of client.fetch({}, optimizedFields)) {
               if (email.uid) {
                 allEmails.push(email.uid);
                 allEmailData.push(email);
+                processedCount++;
+
+                // Stop processing if we have enough emails for performance
+                if (processedCount >= maxProcess) {
+                  context.logger?.info(`Stopped processing at ${processedCount} emails for performance optimization`);
+                  break;
+                }
               }
             }
 
             context.logger?.info(`Fetched ${allEmails.length} emails with optimized fields for client-side filtering`);
 
-            // Apply client-side filtering based on search criteria
+            // Apply client-side filtering with Alimail-optimized order
+            // Priority: Flags > Date > Size > Address > Text (Alimail doesn't support server-side text search)
             const filteredUids: number[] = [];
+            let textSearchRequired = false;
+
+            // Check if text search is needed (for Alimail optimization)
+            if (searchObject.subject || searchObject.body) {
+              textSearchRequired = true;
+              context.logger?.info(`Text search required - will apply as final filter for Alimail compatibility`);
+            }
+
             for (let i = 0; i < allEmails.length; i++) {
               const uid = allEmails[i];
               const emailData = allEmailData[i];
               let matches = true;
 
-              // Check subject filter
-              if (searchObject.subject && emailData.envelope?.subject) {
-                const subject = emailData.envelope.subject.toLowerCase();
-                const searchSubject = searchObject.subject.toLowerCase();
-                if (!subject.includes(searchSubject)) {
-                  matches = false;
-                }
+              // Step 1: Flags filters (fastest, most selective) - Alimail supports these server-side
+              if (matches && searchObject.seen === false && emailData.flags?.has('\\Seen')) {
+                matches = false;
+              }
+              if (matches && searchObject.seen === true && !emailData.flags?.has('\\Seen')) {
+                matches = false;
+              }
+              if (matches && searchObject.flagged === true && !emailData.flags?.has('\\Flagged')) {
+                matches = false;
+              }
+              if (matches && searchObject.flagged === false && emailData.flags?.has('\\Flagged')) {
+                matches = false;
+              }
+              if (matches && searchObject.answered === true && !emailData.flags?.has('\\Answered')) {
+                matches = false;
+              }
+              if (matches && searchObject.answered === false && emailData.flags?.has('\\Answered')) {
+                matches = false;
               }
 
-              // Check from filter
-              if (searchObject.from && emailData.envelope?.from) {
-                const from = emailData.envelope.from.map((addr: any) => addr.address.toLowerCase()).join(' ');
-                const searchFrom = searchObject.from.toLowerCase();
-                if (!from.includes(searchFrom)) {
-                  matches = false;
-                }
-              }
-
-              // Check to filter
-              if (searchObject.to && emailData.envelope?.to) {
-                const to = emailData.envelope.to.map((addr: any) => addr.address.toLowerCase()).join(' ');
-                const searchTo = searchObject.to.toLowerCase();
-                if (!to.includes(searchTo)) {
-                  matches = false;
-                }
-              }
-
-              // Check date filters
-              if (searchObject.since && emailData.internalDate) {
+              // Step 2: Date filters (fast, very selective) - Alimail supports these server-side
+              if (matches && searchObject.since && emailData.internalDate) {
                 const emailDate = new Date(emailData.internalDate);
                 const sinceDate = new Date(searchObject.since);
                 if (emailDate < sinceDate) {
                   matches = false;
                 }
               }
-
-              if (searchObject.before && emailData.internalDate) {
+              if (matches && searchObject.before && emailData.internalDate) {
                 const emailDate = new Date(emailData.internalDate);
                 const beforeDate = new Date(searchObject.before);
                 if (emailDate > beforeDate) {
@@ -377,16 +389,51 @@ export const getEmailsListOperation: IResourceOperationDef = {
                 }
               }
 
-              // Check flags filters
-              if (searchObject.seen === false && emailData.flags) {
-                if (emailData.flags.has('\\Seen')) {
+              // Step 3: Size filters (fast, moderately selective) - Alimail supports these server-side
+              if (matches && searchObject.larger && emailData.size) {
+                if (emailData.size <= searchObject.larger) {
+                  matches = false;
+                }
+              }
+              if (matches && searchObject.smaller && emailData.size) {
+                if (emailData.size >= searchObject.smaller) {
                   matches = false;
                 }
               }
 
-              if (searchObject.seen === true && emailData.flags) {
-                if (!emailData.flags.has('\\Seen')) {
+              // Step 4: Address filters (moderate speed) - Alimail supports these server-side
+              if (matches && searchObject.from && emailData.envelope?.from) {
+                const from = emailData.envelope.from.map((addr: any) => addr.address.toLowerCase()).join(' ');
+                const searchFrom = searchObject.from.toLowerCase();
+                if (!from.includes(searchFrom)) {
                   matches = false;
+                }
+              }
+              if (matches && searchObject.to && emailData.envelope?.to) {
+                const to = emailData.envelope.to.map((addr: any) => addr.address.toLowerCase()).join(' ');
+                const searchTo = searchObject.to.toLowerCase();
+                if (!to.includes(searchTo)) {
+                  matches = false;
+                }
+              }
+
+              // Step 5: Text filters (slowest, least selective) - Alimail doesn't support server-side text search
+              if (matches && textSearchRequired) {
+                // Subject text search (last resort for Alimail)
+                if (searchObject.subject && emailData.envelope?.subject) {
+                  const subject = emailData.envelope.subject.toLowerCase();
+                  const searchSubject = searchObject.subject.toLowerCase();
+                  if (!subject.includes(searchSubject)) {
+                    matches = false;
+                  }
+                }
+
+                // Note: Body search would require fetching full email content
+                // This is very expensive and should be avoided when possible for Alimail
+                if (matches && searchObject.body) {
+                  context.logger?.warn(`Body search requested but not implemented for performance - Alimail limitation`);
+                  // For now, skip body search to maintain performance
+                  // In future, could implement with source fetching but very slow
                 }
               }
 
@@ -458,17 +505,17 @@ export const getEmailsListOperation: IResourceOperationDef = {
           for await (const email of client.fetch({}, fetchQuery)) {
             if (limitReached) break;
             if (email.uid) {
-              // Add mailbox information to the email object
-              (email as any).mailboxPath = mailboxPath;
-              emailsList.push(email);
-              totalCount++;
-              mailboxCount++;
+          // Add mailbox information to the email object
+          (email as any).mailboxPath = mailboxPath;
+          emailsList.push(email);
+          totalCount++;
+          mailboxCount++;
 
-              // apply limit if specified
-              if (limit > 0 && totalCount >= limit) {
-                context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
-                limitReached = true;
-                break;
+          // apply limit if specified
+          if (limit > 0 && totalCount >= limit) {
+            context.logger?.info(`Reached limit of ${limit} emails, stopping fetch`);
+            limitReached = true;
+            break;
               }
             }
           }
