@@ -1,3 +1,15 @@
+## [2.17.11] (2025-12-31)
+
+### Bug Fix
+
+* **Fixed Move Operation**: Added automatic retry with mailbox creation when moving emails to a non-existent folder
+* **Resolved "COPY failed"**: Attempts to create the destination mailbox if the initial move fails with an IMAP error
+
+### Technical Details
+
+* **Retry Mechanism**: Implemented try-catch-retry logic in EmailMove operation
+* **Error Handling**: Gracefully handles missing destination folders by creating them on the fly
+
 ## [2.17.3](https://github.com/callzhang/n8n-nodes-imap/compare/v2.17.2...v2.17.3) (2025-10-18)
 
 ### Critical Search Bug Fix

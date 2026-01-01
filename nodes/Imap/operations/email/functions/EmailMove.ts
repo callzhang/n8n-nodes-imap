@@ -52,9 +52,33 @@ export const moveEmailOperation: IResourceOperationDef = {
 
     ImapFlowErrorCatcher.getInstance().startErrorCatching();
 
-    const resp = await client.messageMove(emailUid, destinationMailboxPath, {
-      uid: true,
-    });
+    let resp;
+    try {
+      resp = await client.messageMove(emailUid, destinationMailboxPath, {
+        uid: true,
+      });
+    } catch (error) {
+      // Ignore error for now, we will retry below if resp is falsy
+    }
+    
+    if (!resp) {
+      // Retry: Try to create the destination mailbox first, then move again
+      try {
+        await client.mailboxCreate(destinationMailboxPath);
+      } catch (createError) {
+        // Ignore create error, might already exist or other issue
+      }
+      
+      // Retry move
+      ImapFlowErrorCatcher.getInstance().startErrorCatching();
+      try {
+        resp = await client.messageMove(emailUid, destinationMailboxPath, {
+          uid: true,
+        });
+      } catch (retryError) {
+        // If it fails again, we will handle it below with !resp check or standard error propagation
+      }
+    }
 
     if (!resp) {
       const errorsList = ImapFlowErrorCatcher.getInstance().stopAndGetErrorsList();
